@@ -95,7 +95,7 @@ Status: `Complete` (stub adapters; real SDK integration pending)
 - `/chat/stream` via SSE
 
 ### Phase 3: RAG Core
-Status: `In Progress` (schema + text ingestion + chunking + stub embeddings complete)
+Status: `Complete` (retrieval + citations working; embeddings/provider generation still stub-based)
 - RAG schema (`documents`, `chunks`, `embeddings`)
 - Ingestion pipeline (text/markdown first)
 - Chunking + embeddings storage
@@ -249,7 +249,7 @@ Use this checklist as the live progress tracker. Update it after each verified i
 - [x] Add `/chat`
 - [x] Add `/chat/stream` (SSE)
 - [x] Add ingestion pipeline + schema (text ingestion + chunking + stub embeddings)
-- [ ] Add retrieval + citations
+- [x] Add retrieval + citations (pgvector retrieval + citation-grounded chat)
 - [x] Add tests and proof commands for each completed step
 
 ### Phase 5: Evals + Observability + Deploy + UI
@@ -260,6 +260,6 @@ Use this checklist as the live progress tracker. Update it after each verified i
 - [ ] Final screenshots + architecture docs
 
 ## Immediate Next Steps (Practical)
-1. Implement Iteration 6: retrieval + grounded prompt + citations.
+1. Implement Iteration 7: eval harness v1 (dataset + runner + persisted results).
 2. Keep updating this checklist after each verified push.
 3. Do not start UI work until retrieval and citations are working and tested.
