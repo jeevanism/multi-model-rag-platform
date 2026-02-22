@@ -17,7 +17,10 @@ api:
 	$(UVICORN) apps.api.main:app --reload --host 0.0.0.0 --port 8000
 
 migrate:
-	$(PSQL) "$${PSQL_DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/multimodel_rag}" -f migrations/001_init.sql
+	for f in migrations/*.sql; do \
+		echo "Applying $$f"; \
+		$(PSQL) "$${PSQL_DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/multimodel_rag}" -f $$f; \
+	done
 
 db-shell:
 	$(PSQL) "$${PSQL_DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/multimodel_rag}"
