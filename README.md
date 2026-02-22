@@ -256,11 +256,82 @@ Use this checklist as the live progress tracker. Update it after each verified i
 ### Phase 5: Evals + Observability + Deploy + UI
 - [x] Eval dataset + runner + judges + gating (including regression gating baseline checks)
 - [x] Structured logging + tracing (request IDs, JSON logs, span timing events)
-- [ ] Cloud Run deployment
+- [~] Cloud Run deployment (Dockerfile + deploy script implemented; Cloud SQL/Secret Manager deployment verification pending)
 - [ ] React UI + eval dashboard
 - [ ] Final screenshots + architecture docs
 
 ## Immediate Next Steps (Practical)
-1. Implement Iteration 11: deployment path (Dockerfile + Cloud Run setup).
+1. Complete Iteration 11 verification: deploy API to Cloud Run with Cloud SQL + Secret Manager and record proof commands.
 2. Keep updating this checklist after each verified push.
 3. Do not start UI work until retrieval and citations are working and tested.
+
+## Cloud Run Deployment (Iteration 11)
+Current status:
+- `Dockerfile` is present and builds the FastAPI API image
+- `infra/deploy_cloud_run.sh` builds and deploys to Cloud Run
+- Script supports Cloud SQL attachment (`--add-cloudsql-instances`) and Secret Manager env injection (`--set-secrets`)
+
+### Required GCP setup (minimum)
+- Cloud Run service
+- Cloud SQL Postgres instance (with `pgvector` available in DB)
+- Secret Manager secrets for API keys / DB URL (recommended)
+- IAM permissions for Cloud Build + Cloud Run deploy
+
+### Deployment Modes
+1. Direct `DATABASE_URL` (quickest path, external DB or already-routable DB)
+2. Cloud SQL attachment + secret-managed `DATABASE_URL` (recommended for GCP)
+
+### Example: Deploy with Secret Manager + Cloud SQL (Recommended)
+Assumes:
+- `DATABASE_URL` secret contains a SQLAlchemy URL (for Unix socket Cloud SQL, typically using `/cloudsql/<INSTANCE_CONNECTION_NAME>`)
+- `GEMINI_API_KEY` and/or `OPENAI_API_KEY` secrets exist
+
+```bash
+export GCP_PROJECT_ID="your-project-id"
+export GCP_REGION="us-central1"
+export CLOUD_RUN_SERVICE="multi-model-rag-api"
+export CLOUDSQL_INSTANCE="your-project-id:us-central1:rag-db"
+
+# Optional runtime settings
+export MEMORY="1Gi"
+export CPU="1"
+export MAX_INSTANCES="3"
+export INGRESS="all"
+
+# Secret Manager env injection for Cloud Run
+export SECRET_ENV_VARS="DATABASE_URL=DATABASE_URL:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest"
+
+# Non-secret env vars
+export LOG_LEVEL="info"
+export ENABLE_TRACING="true"
+export DEFAULT_PROVIDER="gemini"
+export DEFAULT_ROUTING_MODE="manual"
+
+make deploy-cloud-run
+```
+
+### Example: Deploy with plain env `DATABASE_URL` (Non-secret / quick smoke only)
+```bash
+export GCP_PROJECT_ID="your-project-id"
+export GCP_REGION="us-central1"
+export DATABASE_URL="postgresql+psycopg://USER:PASSWORD@HOST:5432/DBNAME"
+
+make deploy-cloud-run
+```
+
+### Post-Deploy Proof Commands
+The deploy script prints the service URL and runs `/health` automatically (if `curl` is installed).
+
+Manual checks:
+```bash
+curl -s "https://YOUR_SERVICE_URL/health" | jq
+
+curl -s -X POST "https://YOUR_SERVICE_URL/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"hello","provider":"gemini"}' | jq
+```
+
+### Notes / Constraints
+- The script deploys the API image only (UI is a later iteration).
+- For private services (`ALLOW_UNAUTHENTICATED=false`), post-deploy curl will require authenticated requests.
+- Cloud SQL connectivity requires the DB itself to have the schema/migrations applied and `vector` extension enabled.

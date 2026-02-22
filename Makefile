@@ -2,7 +2,7 @@ PYTHON ?= python3
 UVICORN ?= uvicorn
 PSQL ?= psql
 
-.PHONY: up down logs api test lint format typecheck ci-check migrate db-shell db-check eval-smoke eval-gate
+.PHONY: up down logs api test lint format typecheck ci-check migrate db-shell db-check eval-smoke eval-gate docker-build docker-run deploy-cloud-run
 
 up:
 	docker compose up -d
@@ -48,3 +48,12 @@ eval-smoke:
 eval-gate:
 	uv run python scripts/eval_run.py --limit 3 --output .tmp/eval_current.json
 	uv run python scripts/eval_gate.py --current .tmp/eval_current.json
+
+docker-build:
+	docker build -t multi-model-rag-api:local .
+
+docker-run:
+	docker run --rm -p 8080:8080 --env-file .env.example multi-model-rag-api:local
+
+deploy-cloud-run:
+	bash infra/deploy_cloud_run.sh
