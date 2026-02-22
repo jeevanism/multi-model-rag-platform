@@ -45,6 +45,13 @@ Notes:
 - Do not use raw `pip install ...` commands in project docs/scripts unless there is a specific reason.
 - `pyproject.toml` remains the source of dependency definitions.
 
+## Engineering Standards
+Use `python-practice.md` as the Python implementation standard for this project (coding style, architecture boundaries, testing expectations, and quality gates).
+
+Before opening a PR, verify your changes follow:
+- `python-practice.md`
+- the local checks in this README (`ruff`, `mypy`, `pytest`)
+
 ## Quality Gates
 Run before every push (once repo code exists):
 - `ruff check .`
