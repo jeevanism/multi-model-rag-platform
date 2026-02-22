@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from typing import cast
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
@@ -24,5 +25,5 @@ def get_db() -> Generator[Session, None, None]:
 def check_db_connection() -> bool:
     with engine.connect() as connection:
         result = connection.execute(text("SELECT 1"))
-        return result.scalar_one() == 1
-
+        value = cast(int, result.scalar_one())
+        return value == 1

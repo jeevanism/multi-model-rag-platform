@@ -10,7 +10,11 @@ def test_pgvector_extension_exists() -> None:
         "DATABASE_URL",
         "postgresql+psycopg://postgres:postgres@localhost:5432/multimodel_rag",
     )
-    engine = create_engine(database_url, pool_pre_ping=True)
+    engine = create_engine(
+        database_url,
+        pool_pre_ping=True,
+        connect_args={"connect_timeout": 2},
+    )
 
     try:
         with engine.connect() as connection:
@@ -23,4 +27,3 @@ def test_pgvector_extension_exists() -> None:
         engine.dispose()
 
     assert result == "vector"
-
