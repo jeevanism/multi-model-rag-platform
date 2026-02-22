@@ -27,7 +27,7 @@ sudo apt install -y \
   git curl wget unzip ca-certificates gnupg lsb-release \
   build-essential make \
   jq ripgrep \
-  python3 python3-venv python3-pip \
+  python3 python3-venv \
   postgresql-client \
   nodejs npm
 ````
@@ -68,9 +68,9 @@ node -v
 npm -v
 ```
 
-### 0.4 Install Python tooling (recommended: uv)
+### 0.4 Install Python tooling (required: uv)
 
-`uv` is fast and clean for managing venv + deps.
+`uv` is the standard tool for Python venv + dependency management in this project.
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -422,4 +422,3 @@ Project is “portfolio-ready” when:
 
 If you want, paste your Linux distro (Ubuntu version, etc.) and I’ll adjust the install commands to match exactly.
 ```
-

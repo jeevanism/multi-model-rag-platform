@@ -33,6 +33,18 @@ If something fails:
 4. Add a regression test.
 5. Commit as `fix(...)`.
 
+## Python Tooling Standard (`uv`)
+Use `uv` for Python environment and package management across local development and CI.
+
+Preferred workflow:
+1. `uv venv`
+2. `source .venv/bin/activate`
+3. `uv pip install -e ".[dev]"`
+
+Notes:
+- Do not use raw `pip install ...` commands in project docs/scripts unless there is a specific reason.
+- `pyproject.toml` remains the source of dependency definitions.
+
 ## Quality Gates
 Run before every push (once repo code exists):
 - `ruff check .`
