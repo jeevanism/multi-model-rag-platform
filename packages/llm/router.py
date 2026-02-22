@@ -20,4 +20,3 @@ def get_provider(provider: str, model: str | None = None) -> LLMProvider:
     raise UnsupportedProviderError(
         f"Unsupported provider '{provider}'. Supported values: gemini, openai."
     )
-

@@ -14,4 +14,3 @@ class LLMResponse:
     tokens_out: int | None = None
     cost_usd: float | None = None
     raw: dict[str, Any] | None = None
-

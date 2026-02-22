@@ -12,4 +12,3 @@ class LLMProvider(ABC):
     @abstractmethod
     def generate(self, prompt: str) -> LLMResponse:
         """Generate a response from the provider."""
-

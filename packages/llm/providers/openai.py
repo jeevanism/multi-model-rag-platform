@@ -22,4 +22,3 @@ class OpenAIProvider(LLMProvider):
             latency_ms=latency_ms,
             raw={"stub": True},
         )
-

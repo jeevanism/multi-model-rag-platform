@@ -10,4 +10,3 @@ def test_health_returns_200_and_expected_payload() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "service": "api"}
-
