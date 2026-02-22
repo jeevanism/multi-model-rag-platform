@@ -42,3 +42,31 @@ def test_chat_validates_missing_message() -> None:
     response = client.post("/chat", json={"provider": "gemini"})
 
     assert response.status_code == 422
+
+
+def test_chat_stream_returns_sse_events() -> None:
+    client = TestClient(app)
+
+    response = client.post(
+        "/chat/stream",
+        json={"message": "hello world", "provider": "gemini"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert "event: start" in response.text
+    assert "event: token" in response.text
+    assert '"text": "hello"' in response.text
+    assert '"text": "world"' in response.text
+    assert "event: end" in response.text
+
+
+def test_chat_stream_returns_400_for_unsupported_provider() -> None:
+    client = TestClient(app)
+
+    response = client.post(
+        "/chat/stream",
+        json={"message": "hello", "provider": "anthropic"},
+    )
+
+    assert response.status_code == 400
