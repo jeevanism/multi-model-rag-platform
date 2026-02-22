@@ -2,7 +2,7 @@ PYTHON ?= python3
 UVICORN ?= uvicorn
 PSQL ?= psql
 
-.PHONY: up down logs api test lint format typecheck ci-check migrate db-shell db-check
+.PHONY: up down logs api test lint format typecheck ci-check migrate db-shell db-check eval-smoke
 
 up:
 	docker compose up -d
@@ -41,3 +41,6 @@ typecheck:
 	mypy apps/api tests
 
 ci-check: lint typecheck test
+
+eval-smoke:
+	$(PYTHON) scripts/eval_run.py --limit 3
