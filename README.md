@@ -103,7 +103,7 @@ Status: `Complete` (retrieval + citations working; embeddings/provider generatio
 - Grounded prompting + citations
 
 ### Phase 4: Evaluation and Regression Safety
-Status: `In Progress` (dataset + runner + DB persistence complete; judges/gating pending)
+Status: `In Progress` (dataset + runner + persistence + judge scoring complete; regression gating pending)
 - Eval dataset (`jsonl`)
 - Eval runner + result persistence
 - Judge prompts/scoring (groundedness/correctness/hallucination)
@@ -254,13 +254,13 @@ Use this checklist as the live progress tracker. Update it after each verified i
 - [x] Add tests and proof commands for each completed step
 
 ### Phase 5: Evals + Observability + Deploy + UI
-- [~] Eval dataset + runner + judges + gating (dataset + runner + persistence done)
+- [~] Eval dataset + runner + judges + gating (judge scoring done; regression gating pending)
 - [ ] Structured logging + tracing
 - [ ] Cloud Run deployment
 - [ ] React UI + eval dashboard
 - [ ] Final screenshots + architecture docs
 
 ## Immediate Next Steps (Practical)
-1. Implement Iteration 8: judge prompts + scoring (groundedness/correctness/hallucination).
+1. Implement Iteration 9: regression gating against baseline metrics.
 2. Keep updating this checklist after each verified push.
 3. Do not start UI work until retrieval and citations are working and tested.

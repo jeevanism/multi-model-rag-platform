@@ -51,11 +51,15 @@ def insert_eval_run_cases(db: Session, eval_run_id: int, results: list[EvalCaseR
                 """
                 INSERT INTO eval_run_case (
                     eval_run_id, case_id, question, expected_contains, answer, citations,
-                    rag_used, latency_ms, passed, error
+                    rag_used, latency_ms, passed,
+                    correctness_score, groundedness_score, hallucination_score,
+                    error
                 )
                 VALUES (
                     :eval_run_id, :case_id, :question, :expected_contains, :answer, :citations,
-                    :rag_used, :latency_ms, :passed, :error
+                    :rag_used, :latency_ms, :passed,
+                    :correctness_score, :groundedness_score, :hallucination_score,
+                    :error
                 )
                 """
             ),
@@ -69,6 +73,9 @@ def insert_eval_run_cases(db: Session, eval_run_id: int, results: list[EvalCaseR
                 "rag_used": result.rag_used,
                 "latency_ms": result.latency_ms,
                 "passed": result.passed,
+                "correctness_score": result.correctness_score,
+                "groundedness_score": result.groundedness_score,
+                "hallucination_score": result.hallucination_score,
                 "error": result.error,
             },
         )

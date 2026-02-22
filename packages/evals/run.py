@@ -9,6 +9,7 @@ import httpx
 from apps.api.db import SessionLocal
 from packages.evals.aggregate import summarize_results
 from packages.evals.dataset import load_eval_dataset
+from packages.evals.judge import score_case
 from packages.evals.persistence import create_eval_run, insert_eval_run_cases
 from packages.evals.types import EvalCase, EvalCaseResult
 
@@ -98,6 +99,7 @@ def _execute_case(client: httpx.Client, case: EvalCase) -> EvalCaseResult:
         rag_used = bool(body.get("rag_used", False))
         latency_ms = int(body.get("latency_ms", 0) or 0)
         passed = _evaluate_case(case, answer=answer, citations=citations)
+        scores = score_case(case, answer=answer, citations=citations, rag_used=rag_used)
         return EvalCaseResult(
             case_id=case.id,
             question=case.question,
@@ -107,6 +109,9 @@ def _execute_case(client: httpx.Client, case: EvalCase) -> EvalCaseResult:
             rag_used=rag_used,
             latency_ms=latency_ms,
             passed=passed,
+            correctness_score=scores.correctness_score,
+            groundedness_score=scores.groundedness_score,
+            hallucination_score=scores.hallucination_score,
         )
     except (httpx.HTTPError, json.JSONDecodeError, ValueError) as exc:
         return EvalCaseResult(
@@ -118,6 +123,9 @@ def _execute_case(client: httpx.Client, case: EvalCase) -> EvalCaseResult:
             rag_used=False,
             latency_ms=0,
             passed=False,
+            correctness_score=0.0,
+            groundedness_score=0.0,
+            hallucination_score=1.0,
             error=str(exc),
         )
 

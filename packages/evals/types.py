@@ -26,6 +26,9 @@ class EvalCaseResult:
     rag_used: bool
     latency_ms: int
     passed: bool
+    correctness_score: float | None = None
+    groundedness_score: float | None = None
+    hallucination_score: float | None = None
     error: str | None = None
 
 
