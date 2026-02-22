@@ -7,7 +7,7 @@ from pathlib import Path
 import httpx
 
 from apps.api.db import SessionLocal
-from packages.evals.aggregate import summarize_results
+from packages.evals.aggregate import average_score, summarize_results
 from packages.evals.dataset import load_eval_dataset
 from packages.evals.judge import score_case
 from packages.evals.persistence import create_eval_run, insert_eval_run_cases
@@ -20,6 +20,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--api-base-url", default="http://localhost:8000")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--persist", action="store_true")
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Optional path to write full eval payload JSON",
+    )
     return parser.parse_args()
 
 
@@ -44,6 +49,9 @@ def run_eval(
             "total_cases": summary.total_cases,
             "passed_cases": summary.passed_cases,
             "avg_latency_ms": round(summary.avg_latency_ms, 2),
+            "correctness_avg": round(average_score(results, "correctness_score"), 4),
+            "groundedness_avg": round(average_score(results, "groundedness_score"), 4),
+            "hallucination_avg": round(average_score(results, "hallucination_score"), 4),
         },
         "results": [result.__dict__ for result in results],
     }
@@ -145,6 +153,9 @@ def main() -> None:
         limit=args.limit,
         persist=args.persist,
     )
+    if args.output:
+        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.output).write_text(json.dumps(payload, indent=2), encoding="utf-8")
     print(json.dumps(payload["summary"], indent=2))
     if "eval_run_id" in payload:
         print(json.dumps({"eval_run_id": payload["eval_run_id"]}))

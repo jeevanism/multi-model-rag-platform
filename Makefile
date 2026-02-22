@@ -2,7 +2,7 @@ PYTHON ?= python3
 UVICORN ?= uvicorn
 PSQL ?= psql
 
-.PHONY: up down logs api test lint format typecheck ci-check migrate db-shell db-check eval-smoke
+.PHONY: up down logs api test lint format typecheck ci-check migrate db-shell db-check eval-smoke eval-gate
 
 up:
 	docker compose up -d
@@ -43,4 +43,8 @@ typecheck:
 ci-check: lint typecheck test
 
 eval-smoke:
-	$(PYTHON) scripts/eval_run.py --limit 3
+	uv run python scripts/eval_run.py --limit 3
+
+eval-gate:
+	uv run python scripts/eval_run.py --limit 3 --output .tmp/eval_current.json
+	uv run python scripts/eval_gate.py --current .tmp/eval_current.json
