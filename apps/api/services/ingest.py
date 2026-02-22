@@ -6,6 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from apps.api.schemas.ingest import IngestTextRequest, IngestTextResponse
+from packages.observability.tracing import trace_span
 from packages.rag.chunking import chunk_text
 from packages.rag.embeddings import (
     EMBEDDING_MODEL,
@@ -16,41 +17,42 @@ from packages.rag.embeddings import (
 
 
 def ingest_text_document(db: Session, request: IngestTextRequest) -> IngestTextResponse:
-    chunks = chunk_text(
-        request.content,
-        max_chars=request.chunk_size,
-        overlap_chars=request.chunk_overlap,
-    )
-    if not chunks:
-        raise ValueError("No chunks generated from content")
+    with trace_span("ingest.text", title=request.title):
+        chunks = chunk_text(
+            request.content,
+            max_chars=request.chunk_size,
+            overlap_chars=request.chunk_overlap,
+        )
+        if not chunks:
+            raise ValueError("No chunks generated from content")
 
-    try:
-        document_id = _insert_document(db, title=request.title, content=request.content)
-        embedding_count = 0
+        try:
+            document_id = _insert_document(db, title=request.title, content=request.content)
+            embedding_count = 0
 
-        for chunk_index, chunk in enumerate(chunks):
-            chunk_id = _insert_chunk(
-                db,
-                document_id=document_id,
-                chunk_index=chunk_index,
-                content=chunk,
-            )
-            vector = embed_text_deterministic(chunk)
-            _insert_embedding(db, chunk_id=chunk_id, vector_literal=to_pgvector_literal(vector))
-            embedding_count += 1
+            for chunk_index, chunk in enumerate(chunks):
+                chunk_id = _insert_chunk(
+                    db,
+                    document_id=document_id,
+                    chunk_index=chunk_index,
+                    content=chunk,
+                )
+                vector = embed_text_deterministic(chunk)
+                _insert_embedding(db, chunk_id=chunk_id, vector_literal=to_pgvector_literal(vector))
+                embedding_count += 1
 
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
 
-    return IngestTextResponse(
-        document_id=document_id,
-        chunk_count=len(chunks),
-        embedding_count=embedding_count,
-        embedding_provider=EMBEDDING_PROVIDER,
-        embedding_model=EMBEDDING_MODEL,
-    )
+        return IngestTextResponse(
+            document_id=document_id,
+            chunk_count=len(chunks),
+            embedding_count=embedding_count,
+            embedding_provider=EMBEDDING_PROVIDER,
+            embedding_model=EMBEDDING_MODEL,
+        )
 
 
 def _insert_document(db: Session, title: str, content: str) -> int:

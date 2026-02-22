@@ -2,19 +2,25 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from apps.api import middleware
 from apps.api.db import SessionLocal, get_db
 from apps.api.schemas.chat import ChatRequest, ChatResponse
 from apps.api.schemas.ingest import IngestTextRequest, IngestTextResponse
 from apps.api.services.chat import generate_chat_response, stream_chat_events
 from apps.api.services.ingest import ingest_text_document
+from apps.api.settings import settings
 from packages.llm.router import UnsupportedProviderError
+from packages.observability.logging import configure_logging
+from packages.observability.request_context import get_request_id
 
 app = FastAPI(title="Multi-Model RAG API", version="0.1.0")
+configure_logging(settings.log_level)
+app.middleware("http")(middleware.request_observability_middleware)
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "api"}
+    return {"status": "ok", "service": "api", "request_id": get_request_id() or ""}
 
 
 @app.post("/chat", response_model=ChatResponse)

@@ -11,6 +11,7 @@ class Settings:
         "postgresql+psycopg://postgres:postgres@localhost:5432/multimodel_rag",
     )
     log_level: str = os.getenv("LOG_LEVEL", "info")
+    enable_tracing: bool = os.getenv("ENABLE_TRACING", "true").lower() == "true"
 
 
 settings = Settings()

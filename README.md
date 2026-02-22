@@ -255,12 +255,12 @@ Use this checklist as the live progress tracker. Update it after each verified i
 
 ### Phase 5: Evals + Observability + Deploy + UI
 - [x] Eval dataset + runner + judges + gating (including regression gating baseline checks)
-- [ ] Structured logging + tracing
+- [x] Structured logging + tracing (request IDs, JSON logs, span timing events)
 - [ ] Cloud Run deployment
 - [ ] React UI + eval dashboard
 - [ ] Final screenshots + architecture docs
 
 ## Immediate Next Steps (Practical)
-1. Implement Iteration 10: observability (structured logging + tracing).
+1. Implement Iteration 11: deployment path (Dockerfile + Cloud Run setup).
 2. Keep updating this checklist after each verified push.
 3. Do not start UI work until retrieval and citations are working and tested.
