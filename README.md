@@ -80,6 +80,7 @@ CI should eventually run:
 
 ## Suggested Build Sequence (Dependency-First)
 ### Phase 1: Foundation
+Status: `Complete`
 - Repo scaffold
 - Docker Compose with Postgres + pgvector
 - FastAPI `/health`
@@ -87,12 +88,14 @@ CI should eventually run:
 - CI pipeline + local quality gates
 
 ### Phase 2: Model Access
+Status: `Complete` (stub adapters; real SDK integration pending)
 - LLM provider abstraction (Gemini + OpenAI)
 - Unified response types + retries/timeouts
 - `/chat` endpoint (non-streaming first)
 - `/chat/stream` via SSE
 
 ### Phase 3: RAG Core
+Status: `In Progress` (schema + text ingestion + chunking + stub embeddings complete)
 - RAG schema (`documents`, `chunks`, `embeddings`)
 - Ingestion pipeline (text/markdown first)
 - Chunking + embeddings storage
@@ -201,10 +204,10 @@ Avoid overbuilding:
 - `LOG_LEVEL=info`
 
 ## Actionable Checklist (Current Repo)
-This repo currently contains planning docs only. Use this checklist to start implementation.
+Use this checklist as the live progress tracker. Update it after each verified iteration / push.
 
 ### Phase 0: Bootstrap the repository
-- [ ] Create project folders:
+- [x] Create project folders:
   - `apps/api`
   - `apps/web`
   - `packages/llm`
@@ -214,40 +217,40 @@ This repo currently contains planning docs only. Use this checklist to start imp
   - `infra`
   - `datasets`
   - `docs`
-- [ ] Add `.gitignore`
-- [ ] Add `.env.example`
-- [ ] Add `docker-compose.yml` (Postgres + pgvector)
-- [ ] Add `pyproject.toml` (ruff/mypy/pytest config)
-- [ ] Add `Makefile`
-- [ ] Add `.github/workflows/ci.yml`
+- [x] Add `.gitignore`
+- [x] Add `.env.example`
+- [x] Add `docker-compose.yml` (Postgres + pgvector)
+- [x] Add `pyproject.toml` (ruff/mypy/pytest config)
+- [x] Add `Makefile`
+- [x] Add `.github/workflows/ci.yml`
 
 ### Phase 1: Prove backend baseline
-- [ ] Create FastAPI app in `apps/api/main.py`
-- [ ] Add `GET /health`
-- [ ] Add `tests/test_health.py`
-- [ ] Run local proof: `curl http://localhost:8000/health`
-- [ ] Commit baseline scaffold
+- [x] Create FastAPI app in `apps/api/main.py`
+- [x] Add `GET /health`
+- [x] Add `tests/test_health.py`
+- [x] Run local proof: `curl http://localhost:8000/health`
+- [x] Commit baseline scaffold
 
 ### Phase 2: Database readiness
-- [ ] Add DB connection module
-- [ ] Add migration `migrations/001_init.sql` with pgvector extension
-- [ ] Add integration test to verify `vector` extension exists
-- [ ] Commit DB setup
+- [x] Add DB connection module
+- [x] Add migration `migrations/001_init.sql` with pgvector extension
+- [x] Add integration test to verify `vector` extension exists
+- [x] Commit DB setup
 
 ### Phase 3: LLM integration baseline
-- [ ] Add `LLMProvider` interface
-- [ ] Add Gemini provider adapter
-- [ ] Add OpenAI provider adapter
-- [ ] Add unified response schema
-- [ ] Add smoke script for provider calls
-- [ ] Commit provider abstraction
+- [x] Add `LLMProvider` interface
+- [x] Add Gemini provider adapter (stub)
+- [x] Add OpenAI provider adapter (stub)
+- [x] Add unified response schema
+- [x] Add smoke script for provider calls
+- [x] Commit provider abstraction
 
 ### Phase 4: Chat + Streaming + RAG
-- [ ] Add `/chat`
-- [ ] Add `/chat/stream` (SSE)
-- [ ] Add ingestion pipeline + schema
+- [x] Add `/chat`
+- [x] Add `/chat/stream` (SSE)
+- [x] Add ingestion pipeline + schema (text ingestion + chunking + stub embeddings)
 - [ ] Add retrieval + citations
-- [ ] Add tests and proof commands for each step
+- [x] Add tests and proof commands for each completed step
 
 ### Phase 5: Evals + Observability + Deploy + UI
 - [ ] Eval dataset + runner + judges + gating
@@ -257,6 +260,6 @@ This repo currently contains planning docs only. Use this checklist to start imp
 - [ ] Final screenshots + architecture docs
 
 ## Immediate Next Steps (Practical)
-1. Implement Iteration 0 and Iteration 1 only.
-2. Keep all proof commands and test commands in the `Makefile`.
-3. Do not start UI work until `/chat` and RAG retrieval are working and tested.
+1. Implement Iteration 6: retrieval + grounded prompt + citations.
+2. Keep updating this checklist after each verified push.
+3. Do not start UI work until retrieval and citations are working and tested.
