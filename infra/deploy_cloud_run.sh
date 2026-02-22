@@ -13,7 +13,8 @@ set -euo pipefail
 #   CLOUDSQL_INSTANCE (Cloud SQL instance connection name)
 #   SECRET_ENV_VARS (comma-separated KEY=secret:version pairs for --set-secrets)
 #   SERVICE_ACCOUNT
-#   MIN_INSTANCES, MAX_INSTANCES, MEMORY, CPU, INGRESS
+#   CLOUD_RUN_MIN_INSTANCES, CLOUD_RUN_MAX_INSTANCES
+#   CLOUD_RUN_MEMORY, CLOUD_RUN_CPU, CLOUD_RUN_INGRESS
 #   DATABASE_URL, LOG_LEVEL, ENABLE_TRACING, DEFAULT_PROVIDER, DEFAULT_ROUTING_MODE
 #   POST_DEPLOY_SMOKE (default: true) - curl /health after deploy when curl is available
 
@@ -63,24 +64,24 @@ if [[ -n "${SERVICE_ACCOUNT:-}" ]]; then
   DEPLOY_ARGS+=(--service-account "${SERVICE_ACCOUNT}")
 fi
 
-if [[ -n "${MIN_INSTANCES:-}" ]]; then
-  DEPLOY_ARGS+=(--min-instances "${MIN_INSTANCES}")
+if [[ -n "${CLOUD_RUN_MIN_INSTANCES:-}" ]]; then
+  DEPLOY_ARGS+=(--min-instances "${CLOUD_RUN_MIN_INSTANCES}")
 fi
 
-if [[ -n "${MAX_INSTANCES:-}" ]]; then
-  DEPLOY_ARGS+=(--max-instances "${MAX_INSTANCES}")
+if [[ -n "${CLOUD_RUN_MAX_INSTANCES:-}" ]]; then
+  DEPLOY_ARGS+=(--max-instances "${CLOUD_RUN_MAX_INSTANCES}")
 fi
 
-if [[ -n "${MEMORY:-}" ]]; then
-  DEPLOY_ARGS+=(--memory "${MEMORY}")
+if [[ -n "${CLOUD_RUN_MEMORY:-}" ]]; then
+  DEPLOY_ARGS+=(--memory "${CLOUD_RUN_MEMORY}")
 fi
 
-if [[ -n "${CPU:-}" ]]; then
-  DEPLOY_ARGS+=(--cpu "${CPU}")
+if [[ -n "${CLOUD_RUN_CPU:-}" ]]; then
+  DEPLOY_ARGS+=(--cpu "${CLOUD_RUN_CPU}")
 fi
 
-if [[ -n "${INGRESS:-}" ]]; then
-  DEPLOY_ARGS+=(--ingress "${INGRESS}")
+if [[ -n "${CLOUD_RUN_INGRESS:-}" ]]; then
+  DEPLOY_ARGS+=(--ingress "${CLOUD_RUN_INGRESS}")
 fi
 
 ENV_VARS=()

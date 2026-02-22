@@ -293,10 +293,10 @@ export CLOUD_RUN_SERVICE="multi-model-rag-api"
 export CLOUDSQL_INSTANCE="your-project-id:us-central1:rag-db"
 
 # Optional runtime settings
-export MEMORY="1Gi"
-export CPU="1"
-export MAX_INSTANCES="3"
-export INGRESS="all"
+export CLOUD_RUN_MEMORY="1Gi"
+export CLOUD_RUN_CPU="1"
+export CLOUD_RUN_MAX_INSTANCES="3"
+export CLOUD_RUN_INGRESS="all"
 
 # Secret Manager env injection for Cloud Run
 export SECRET_ENV_VARS="DATABASE_URL=DATABASE_URL:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest"
