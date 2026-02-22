@@ -59,34 +59,39 @@ CI should eventually run:
 - `infra/`: deployment configs/scripts
 - `docs/`: architecture and screenshots
 
-## Suggested Build Roadmap (5 Weeks)
-### Week 1
+## Suggested Build Sequence (Dependency-First)
+### Phase 1: Foundation
 - Repo scaffold
 - Docker Compose with Postgres + pgvector
 - FastAPI `/health`
 - DB connectivity + migration setup
-- LLM provider abstraction (Gemini + OpenAI)
-- `/chat` endpoint (non-streaming first), then SSE streaming
+- CI pipeline + local quality gates
 
-### Week 2
+### Phase 2: Model Access
+- LLM provider abstraction (Gemini + OpenAI)
+- Unified response types + retries/timeouts
+- `/chat` endpoint (non-streaming first)
+- `/chat/stream` via SSE
+
+### Phase 3: RAG Core
 - RAG schema (`documents`, `chunks`, `embeddings`)
 - Ingestion pipeline (text/markdown first)
 - Chunking + embeddings storage
 - Retrieval via pgvector
 - Grounded prompting + citations
 
-### Week 3
+### Phase 4: Evaluation and Regression Safety
 - Eval dataset (`jsonl`)
 - Eval runner + result persistence
 - Judge prompts/scoring (groundedness/correctness/hallucination)
 - Regression gating against baseline
 
-### Week 4
+### Phase 5: Observability and Deployment
 - Structured logging + request correlation
 - OpenTelemetry spans (request/retrieval/llm)
 - Dockerfile + Cloud Run deployment path
 
-### Week 5
+### Phase 6: Product Surface and Polish
 - React UI (chat streaming, model selector, citations, latency/cost)
 - Eval dashboard
 - Final docs, screenshots, architecture/tradeoffs
@@ -236,4 +241,3 @@ This repo currently contains planning docs only. Use this checklist to start imp
 1. Implement Iteration 0 and Iteration 1 only.
 2. Keep all proof commands and test commands in the `Makefile`.
 3. Do not start UI work until `/chat` and RAG retrieval are working and tested.
-
