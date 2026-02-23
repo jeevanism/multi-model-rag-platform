@@ -257,11 +257,11 @@ Use this checklist as the live progress tracker. Update it after each verified i
 - [x] Eval dataset + runner + judges + gating (including regression gating baseline checks)
 - [x] Structured logging + tracing (request IDs, JSON logs, span timing events)
 - [x] Cloud Run deployment path (Dockerfile + deploy script + local container `/health` proof complete)
-- [ ] React UI + eval dashboard
+- [~] React UI + eval dashboard (chat UI complete; eval dashboard pending)
 - [ ] Final screenshots + architecture docs
 
 ## Immediate Next Steps (Practical)
-1. Implement Iteration 12: React UI (chat, streaming, citations, model selector).
+1. Implement Iteration 13: eval dashboard UI + final polish/docs/screenshots.
 2. Keep updating this checklist after each verified push.
 3. Do not start UI work until retrieval and citations are working and tested.
 
