@@ -1,12 +1,15 @@
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from apps.api import middleware
 from apps.api.db import SessionLocal, get_db
 from apps.api.schemas.chat import ChatRequest, ChatResponse
+from apps.api.schemas.evals import EvalRunDetail, EvalRunSummaryItem
 from apps.api.schemas.ingest import IngestTextRequest, IngestTextResponse
 from apps.api.services.chat import generate_chat_response, stream_chat_events
+from apps.api.services.evals import get_eval_run_detail, list_eval_runs
 from apps.api.services.ingest import ingest_text_document
 from apps.api.settings import settings
 from packages.llm.router import UnsupportedProviderError
@@ -16,6 +19,16 @@ from packages.observability.request_context import get_request_id
 app = FastAPI(title="Multi-Model RAG API", version="0.1.0")
 configure_logging(settings.log_level)
 app.middleware("http")(middleware.request_observability_middleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
@@ -54,3 +67,16 @@ def ingest_text(request: IngestTextRequest, db: Session = Depends(get_db)) -> In
         return ingest_text_document(db, request)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/evals/runs", response_model=list[EvalRunSummaryItem])
+def eval_runs(db: Session = Depends(get_db)) -> list[EvalRunSummaryItem]:
+    return list_eval_runs(db)
+
+
+@app.get("/evals/runs/{eval_run_id}", response_model=EvalRunDetail)
+def eval_run_detail(eval_run_id: int, db: Session = Depends(get_db)) -> EvalRunDetail:
+    detail = get_eval_run_detail(db, eval_run_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Eval run not found")
+    return detail
