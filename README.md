@@ -256,12 +256,12 @@ Use this checklist as the live progress tracker. Update it after each verified i
 ### Phase 5: Evals + Observability + Deploy + UI
 - [x] Eval dataset + runner + judges + gating (including regression gating baseline checks)
 - [x] Structured logging + tracing (request IDs, JSON logs, span timing events)
-- [~] Cloud Run deployment (Dockerfile + deploy script implemented; Cloud SQL/Secret Manager deployment verification pending)
+- [x] Cloud Run deployment path (Dockerfile + deploy script + local container `/health` proof complete)
 - [ ] React UI + eval dashboard
 - [ ] Final screenshots + architecture docs
 
 ## Immediate Next Steps (Practical)
-1. Complete Iteration 11 verification: deploy API to Cloud Run with Cloud SQL + Secret Manager and record proof commands.
+1. Implement Iteration 12: React UI (chat, streaming, citations, model selector).
 2. Keep updating this checklist after each verified push.
 3. Do not start UI work until retrieval and citations are working and tested.
 
