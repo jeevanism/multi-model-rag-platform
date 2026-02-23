@@ -52,6 +52,14 @@ Before opening a PR, verify your changes follow:
 - `python-practice.md`
 - the local checks in this README (`ruff`, `mypy`, `pytest`)
 
+## Operational Docs
+Use these docs for cloud setup, troubleshooting, and RAG proof/testing workflows:
+
+- `gcp-commands.md` - reusable GCP command reference (Cloud Run, Cloud SQL, secrets, logs)
+- `gcp-setup-steps.md` - chronological record of the cloud setup steps performed
+- `troubleshooting.md` - GCP-specific errors encountered and how we fixed them
+- `RAG-TEST.md` - positive/negative RAG test cases with proof criteria
+
 ## Quality Gates
 Run before every push (once repo code exists):
 - `ruff check .`
@@ -77,6 +85,53 @@ CI should eventually run:
 - `datasets/`: eval datasets
 - `infra/`: deployment configs/scripts
 - `docs/`: architecture and screenshots
+
+## Architecture (Implemented)
+High-level request flow:
+
+1. `apps/web` (React UI) sends chat/eval requests to `apps/api`
+2. `apps/api` routes requests through service-layer functions
+3. `packages/llm` handles provider abstraction (currently stub Gemini/OpenAI adapters)
+4. `packages/rag` handles chunking, embeddings (stub), retrieval, prompt grounding, citations
+5. `packages/evals` runs eval datasets, scoring, aggregation, persistence, and regression gating
+6. Postgres + `pgvector` stores documents/chunks/embeddings and eval run history
+7. `packages/observability` emits request-level structured logs and span timing events
+
+### Runtime Components
+- API: FastAPI (`/health`, `/chat`, `/chat/stream`, `/ingest/text`, `/evals/runs`, `/evals/runs/{id}`)
+- DB: Postgres + `pgvector`
+- UI: Vite React app with Chat + Evals dashboard tabs
+- Local infra: Docker Compose for Postgres, Dockerfile for API container
+
+### Data Model (Current)
+- RAG:
+  - `documents`
+  - `chunks`
+  - `embeddings`
+- Evals:
+  - `eval_run`
+  - `eval_run_case` (including judge score columns)
+
+## Tradeoffs (Current State)
+This project is intentionally portfolio-friendly and iteration-driven, so several components are production-shaped but stub-backed.
+
+### What is production-shaped
+- API boundaries and schemas
+- provider abstraction layer
+- pgvector retrieval path
+- eval runner + persistence + gating
+- structured logging and request tracing
+- deployment path (Dockerfile + Cloud Run deploy script)
+
+### What is intentionally stubbed (for speed)
+- LLM provider adapters return stub responses
+- embedding generation is deterministic stub embeddings
+- tracing is log-based spans (not full OpenTelemetry exporter yet)
+
+### Why this tradeoff was chosen
+- Enables end-to-end architecture, testing, and deployment workflow first
+- Keeps iteration speed high
+- Makes it easy to replace internals later without changing surface APIs/UI
 
 ## Suggested Build Sequence (Dependency-First)
 ### Phase 1: Foundation
@@ -178,6 +233,73 @@ An iteration is done only when:
 - CI passes (when configured)
 - changes committed and pushed
 
+## Quickstart (Local)
+### 1. Start dependencies
+From repo root:
+
+```bash
+make up
+make migrate
+```
+
+### 2. Run backend
+From repo root:
+
+```bash
+uv venv
+source .venv/bin/activate
+uv pip install -e ".[dev]"
+uv run uvicorn apps.api.main:app --reload --port 8000
+```
+
+### 3. Run frontend
+In a second terminal:
+
+```bash
+cd apps/web
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`
+
+### 4. Run checks
+Backend (repo root):
+
+```bash
+uv run ruff format .
+uv run ruff check .
+uv run mypy apps/api tests packages scripts
+uv run pytest -q
+```
+
+Frontend (`apps/web`):
+
+```bash
+npm run build
+```
+
+## Eval Workflow (Local)
+With API running on `http://localhost:8000`:
+
+```bash
+make eval-smoke
+make eval-gate
+```
+
+Persist eval results to DB:
+
+```bash
+uv run python scripts/eval_run.py --limit 3 --persist
+```
+
+Inspect recent evals:
+
+```bash
+curl -s http://localhost:8000/evals/runs | jq
+curl -s http://localhost:8000/evals/runs/1 | jq
+```
+
 ## Commit Message Style
 Examples:
 - `chore: scaffold repo with api + pgvector + ci`
@@ -259,6 +381,14 @@ Use this checklist as the live progress tracker. Update it after each verified i
 - [x] Cloud Run deployment path (Dockerfile + deploy script + local container `/health` proof complete)
 - [x] React UI + eval dashboard (chat, streaming, citations, retrieved chunks, eval runs/case table)
 - [ ] Final screenshots + architecture docs
+
+## Screenshots Checklist (Portfolio Polish)
+- [ ] Chat UI (JSON mode with citations + debug retrieved chunks)
+- [ ] Chat UI (SSE mode message)
+- [ ] Evals dashboard (runs list + case score table)
+- [ ] API observability log sample (request + spans)
+- [ ] Local container `/health` proof
+- [ ] Optional Cloud Run `/health` + `/chat` proof
 
 ## Immediate Next Steps (Practical)
 1. Finalize portfolio polish: screenshots + README architecture/tradeoffs/docs.
