@@ -6,7 +6,9 @@ from packages.llm.router import get_provider
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Local LLM provider smoke test (stub providers).")
+    parser = argparse.ArgumentParser(
+        description="Local LLM provider smoke test (stub or real, depending on LLM_PROVIDER_MODE)."
+    )
     parser.add_argument("--provider", choices=["gemini", "openai"], required=True)
     parser.add_argument("--prompt", required=True)
     parser.add_argument("--model", default=None)
@@ -23,7 +25,9 @@ def main() -> None:
             "provider": response.provider,
             "model": response.model,
             "latency_ms": response.latency_ms,
-            "stub": response.raw,
+            "tokens_in": response.tokens_in,
+            "tokens_out": response.tokens_out,
+            "raw": response.raw,
         }
     )
 

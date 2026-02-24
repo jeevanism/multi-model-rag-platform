@@ -281,6 +281,15 @@ gcloud secrets add-iam-policy-binding "$DB_URL_SECRET" \
   --role="roles/secretmanager.secretAccessor"
 ```
 
+Grant Cloud Run access to Gemini API key secret (for real Gemini mode):
+
+```bash
+gcloud secrets add-iam-policy-binding GEMINI_API_KEY \
+  --project="$PROJECT_ID" \
+  --member="serviceAccount:${RUN_SA}" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
 ## 9. Attach Cloud SQL + Secret to Cloud Run
 
 Update service with Cloud SQL mount + `DATABASE_URL` secret + runtime env vars:
@@ -408,3 +417,111 @@ gcloud run services delete "$CLOUD_RUN_SERVICE" \
 - Cloud Run stateless endpoints (`/health`, `/chat`, `/chat/stream`) can work without Cloud SQL.
 - DB-backed endpoints (`/ingest/text`, `/evals/*`, `/chat` with `rag=true`) require Cloud SQL + migrations.
 - Keep local secrets in `.env.deploy.local` (ignored by git). Do not commit `.env` files.
+
+## 14. Real Gemini + Real Embeddings (Cloud Run)
+
+Create/update the Gemini API key secret:
+
+```bash
+printf '%s' "$GEMINI_API_KEY" | gcloud secrets create GEMINI_API_KEY \
+  --project="$PROJECT_ID" \
+  --replication-policy=automatic \
+  --data-file=-
+```
+
+If the secret already exists:
+
+```bash
+printf '%s' "$GEMINI_API_KEY" | gcloud secrets versions add GEMINI_API_KEY \
+  --project="$PROJECT_ID" \
+  --data-file=-
+```
+
+Important:
+- If `Secret Payload cannot be empty`, your `GEMINI_API_KEY` env var is not set in the current shell.
+- Cloud Run `--set-secrets ... GEMINI_API_KEY=...:latest` fails if the secret exists but has no versions.
+
+Update Cloud Run for real Gemini generation + real Gemini embeddings:
+
+```bash
+gcloud run services update "$CLOUD_RUN_SERVICE" \
+  --project="$PROJECT_ID" \
+  --region="$REGION" \
+  --add-cloudsql-instances="$INSTANCE_CONN_NAME" \
+  --set-secrets="DATABASE_URL=${DB_URL_SECRET}:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest" \
+  --update-env-vars="^@^LLM_PROVIDER_MODE=real@EMBEDDING_PROVIDER_MODE=real@EMBEDDING_PROVIDER=gemini@GEMINI_EMBEDDING_MODEL=gemini-embedding-001@CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,https://multi-model-rag-5713b.web.app,https://multi-model-rag-5713b.firebaseapp.com@LOG_LEVEL=info@ENABLE_TRACING=true@DEFAULT_PROVIDER=gemini@DEFAULT_ROUTING_MODE=manual"
+```
+
+Rebuild/redeploy note (important):
+- `make deploy-cloud-run` can reset env vars back to deploy defaults (stub mode).
+- Re-run the `gcloud run services update ... --update-env-vars ...` command after each backend deploy until the deploy script is updated.
+
+`uv.lock` note (important for Docker builds):
+- Dockerfile uses `uv sync --frozen --no-dev`, so image deps come from `uv.lock`.
+- If you add runtime deps in `pyproject.toml`, run:
+
+```bash
+uv lock
+```
+
+before rebuilding/deploying, or the image will still miss the new packages.
+
+Cloud proof (real mode):
+
+```bash
+curl -s -X POST "$CLOUD_RUN_URL/ingest/text" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Real Embedding Cloud Doc 6","content":"Tokyo is the capital of Japan."}'
+
+curl -s -X POST "$CLOUD_RUN_URL/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"What is the capital of Japan?","provider":"gemini","rag":true,"debug":true}'
+```
+
+Expected:
+- `/ingest/text` returns `"embedding_provider":"gemini"` and `"embedding_model":"gemini-embedding-001"`
+- `/chat` returns a real Gemini answer (no `[stub:gemini]` prefix), plus citations and token usage
+
+## 15. Cloud Eval Comparison (Real Mode)
+
+Important:
+- `scripts/eval_run.py` defaults to `http://localhost:8000`
+- `API_BASE_URL` environment variable is **not** used by the script
+- always pass `--api-base-url` explicitly when targeting Cloud Run
+
+Run eval against Cloud Run (save payload JSON):
+
+```bash
+uv run python scripts/eval_run.py \
+  --api-base-url "https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app" \
+  --limit 3 \
+  --output .tmp/eval_real.json
+```
+
+Run gate against baseline:
+
+```bash
+uv run python scripts/eval_gate.py --current .tmp/eval_real.json
+```
+
+Persist eval run to DB (shows in Evals dashboard):
+
+```bash
+uv run python scripts/eval_run.py \
+  --api-base-url "https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app" \
+  --limit 3 \
+  --persist \
+  --output .tmp/eval_real.json
+```
+
+Inspect raw eval payload (including per-case errors/results):
+
+```bash
+cat .tmp/eval_real.json
+```
+
+Useful follow-up:
+
+```bash
+curl -s "https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app/evals/runs"
+```

@@ -9,9 +9,7 @@ from apps.api.schemas.ingest import IngestTextRequest, IngestTextResponse
 from packages.observability.tracing import trace_span
 from packages.rag.chunking import chunk_text
 from packages.rag.embeddings import (
-    EMBEDDING_MODEL,
-    EMBEDDING_PROVIDER,
-    embed_text_deterministic,
+    embed_text,
     to_pgvector_literal,
 )
 
@@ -29,6 +27,8 @@ def ingest_text_document(db: Session, request: IngestTextRequest) -> IngestTextR
         try:
             document_id = _insert_document(db, title=request.title, content=request.content)
             embedding_count = 0
+            first_embedding_provider = ""
+            first_embedding_model = ""
 
             for chunk_index, chunk in enumerate(chunks):
                 chunk_id = _insert_chunk(
@@ -37,8 +37,17 @@ def ingest_text_document(db: Session, request: IngestTextRequest) -> IngestTextR
                     chunk_index=chunk_index,
                     content=chunk,
                 )
-                vector = embed_text_deterministic(chunk)
-                _insert_embedding(db, chunk_id=chunk_id, vector_literal=to_pgvector_literal(vector))
+                embedding = embed_text(chunk)
+                _insert_embedding(
+                    db,
+                    chunk_id=chunk_id,
+                    vector_literal=to_pgvector_literal(embedding.vector),
+                    provider=embedding.provider,
+                    model=embedding.model,
+                )
+                if chunk_index == 0:
+                    first_embedding_provider = embedding.provider
+                    first_embedding_model = embedding.model
                 embedding_count += 1
 
             db.commit()
@@ -50,8 +59,8 @@ def ingest_text_document(db: Session, request: IngestTextRequest) -> IngestTextR
             document_id=document_id,
             chunk_count=len(chunks),
             embedding_count=embedding_count,
-            embedding_provider=EMBEDDING_PROVIDER,
-            embedding_model=EMBEDDING_MODEL,
+            embedding_provider=first_embedding_provider,
+            embedding_model=first_embedding_model,
         )
 
 
@@ -87,7 +96,9 @@ def _insert_chunk(db: Session, document_id: int, chunk_index: int, content: str)
     return cast(int, result.scalar_one())
 
 
-def _insert_embedding(db: Session, chunk_id: int, vector_literal: str) -> None:
+def _insert_embedding(
+    db: Session, chunk_id: int, vector_literal: str, provider: str, model: str
+) -> None:
     db.execute(
         text(
             """
@@ -102,8 +113,8 @@ def _insert_embedding(db: Session, chunk_id: int, vector_literal: str) -> None:
         ),
         {
             "chunk_id": chunk_id,
-            "provider": EMBEDDING_PROVIDER,
-            "model": EMBEDDING_MODEL,
+            "provider": provider,
+            "model": model,
             "embedding": vector_literal,
         },
     )

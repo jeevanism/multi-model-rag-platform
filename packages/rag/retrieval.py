@@ -6,7 +6,7 @@ from typing import cast
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from packages.rag.embeddings import embed_text_deterministic, to_pgvector_literal
+from packages.rag.embeddings import embed_text, to_pgvector_literal
 
 
 @dataclass(frozen=True)
@@ -20,7 +20,7 @@ class RetrievedChunk:
 
 
 def retrieve_chunks(db: Session, query: str, top_k: int = 3) -> list[RetrievedChunk]:
-    vector_literal = to_pgvector_literal(embed_text_deterministic(query))
+    vector_literal = to_pgvector_literal(embed_text(query).vector)
     rows = db.execute(
         text(
             """

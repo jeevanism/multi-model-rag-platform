@@ -23,7 +23,7 @@ This document is the Python engineering standard for this repository and should 
 ## 1. Package and Dependency Management (`uv` Required)
 - Use `uv` for all Python package installation and environment setup.
 - Prefer:
-  - `uv venv`
+  - `uv venv --python 3.11`
   - `source .venv/bin/activate`
   - `uv pip install -e ".[dev]"`
 - For adding dependencies in mature iterations, prefer:
@@ -35,6 +35,12 @@ This document is the Python engineering standard for this repository and should 
 Rules:
 - Do not use ad hoc `pip install ...` commands in docs/scripts/CI unless there is a specific exception.
 - Do not maintain duplicate dependency lists (`requirements.txt`) unless required for deployment tooling.
+
+Python version standard (important):
+- Prefer **Python `3.11`** for this project (local + CI + deploy parity).
+- Reason: current LLM/embedding SDK integrations (e.g. `google-genai`) are more stable on `3.11`, and we encountered SSL/runtime issues on `3.14` during real provider/embedding testing.
+- If a local environment was created with `3.14`, recreate it with:
+  - `uv venv --python 3.11`
 
 ## 2. Project Structure (Pragmatic, Evolves with Size)
 Early-stage projects can start simple. As features grow, move toward feature-based modules.

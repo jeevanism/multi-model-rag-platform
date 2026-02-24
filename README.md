@@ -37,13 +37,16 @@ If something fails:
 Use `uv` for Python environment and package management across local development and CI.
 
 Preferred workflow:
-1. `uv venv`
+1. `uv venv --python 3.11`
 2. `source .venv/bin/activate`
 3. `uv pip install -e ".[dev]"`
 
 Notes:
 - Do not use raw `pip install ...` commands in project docs/scripts unless there is a specific reason.
 - `pyproject.toml` remains the source of dependency definitions.
+- Recommended Python version for this project: `3.11` (best compatibility with current provider SDKs and SSL stack).
+- Python `3.14` may work for some paths, but we hit SDK/SSL runtime issues (`google-genai` / `aiohttp` / `ssl`) during real provider/embedding integration.
+- Cloud Run runtime is also aligned to Python `3.11`, so using `3.11` locally reduces environment mismatch.
 
 ## Engineering Standards
 Use `python-practice.md` as the Python implementation standard for this project (coding style, architecture boundaries, testing expectations, and quality gates).
@@ -91,8 +94,8 @@ High-level request flow:
 
 1. `apps/web` (React UI) sends chat/eval requests to `apps/api`
 2. `apps/api` routes requests through service-layer functions
-3. `packages/llm` handles provider abstraction (currently stub Gemini/OpenAI adapters)
-4. `packages/rag` handles chunking, embeddings (stub), retrieval, prompt grounding, citations
+3. `packages/llm` handles provider abstraction (Gemini real mode working; OpenAI adapter implemented)
+4. `packages/rag` handles chunking, embeddings, retrieval, prompt grounding, citations (Gemini embeddings real mode working)
 5. `packages/evals` runs eval datasets, scoring, aggregation, persistence, and regression gating
 6. Postgres + `pgvector` stores documents/chunks/embeddings and eval run history
 7. `packages/observability` emits request-level structured logs and span timing events
@@ -123,15 +126,20 @@ This project is intentionally portfolio-friendly and iteration-driven, so severa
 - structured logging and request tracing
 - deployment path (Dockerfile + Cloud Run deploy script)
 
-### What is intentionally stubbed (for speed)
-- LLM provider adapters return stub responses
-- embedding generation is deterministic stub embeddings
+### What is intentionally stubbed / partially integrated (current)
+- OpenAI provider runtime validation is pending (no OpenAI API key available yet)
+- Additional providers (Qwen, DeepSeek) are planned but not integrated yet
 - tracing is log-based spans (not full OpenTelemetry exporter yet)
 
 ### Why this tradeoff was chosen
 - Enables end-to-end architecture, testing, and deployment workflow first
 - Keeps iteration speed high
 - Makes it easy to replace internals later without changing surface APIs/UI
+
+### Provider Roadmap (Near-Term)
+- Gemini: real generation + real embeddings are enabled and validated in the hosted cloud demo
+- OpenAI: adapter is implemented, but runtime validation is pending because no OpenAI API key is currently configured
+- Planned next providers: Qwen and DeepSeek (after demo/polish phase)
 
 ## Suggested Build Sequence (Dependency-First)
 ### Phase 1: Foundation
@@ -143,14 +151,14 @@ Status: `Complete`
 - CI pipeline + local quality gates
 
 ### Phase 2: Model Access
-Status: `Complete` (stub adapters; real SDK integration pending)
+Status: `In Progress` (Gemini real generation working; OpenAI adapter implemented but runtime validation pending)
 - LLM provider abstraction (Gemini + OpenAI)
 - Unified response types + retries/timeouts
 - `/chat` endpoint (non-streaming first)
 - `/chat/stream` via SSE
 
 ### Phase 3: RAG Core
-Status: `Complete` (retrieval + citations working; embeddings/provider generation still stub-based)
+Status: `Complete` (retrieval + citations working; real Gemini embeddings enabled in cloud)
 - RAG schema (`documents`, `chunks`, `embeddings`)
 - Ingestion pipeline (text/markdown first)
 - Chunking + embeddings storage
@@ -165,14 +173,17 @@ Status: `Complete` (dataset, runner, persistence, judge scoring, and regression 
 - Regression gating against baseline
 
 ### Phase 5: Observability and Deployment
+- Status: `Complete` (deployment path + manual cloud deploy complete; CI/CD automation pending)
 - Structured logging + request correlation
 - OpenTelemetry spans (request/retrieval/llm)
 - Dockerfile + Cloud Run deployment path
 
 ### Phase 6: Product Surface and Polish
+- Status: `In Progress`
 - React UI (chat streaming, model selector, citations, latency/cost)
 - Eval dashboard
 - Final docs, screenshots, architecture/tradeoffs
+- CI/CD automation (GitHub Actions deploy to Cloud Run + Firebase Hosting)
 
 ## Iteration Plan (Execution Sequence)
 Use this order for implementation:
@@ -392,7 +403,8 @@ Use this checklist as the live progress tracker. Update it after each verified i
 
 ## Immediate Next Steps (Practical)
 1. Finalize portfolio polish: screenshots + README architecture/tradeoffs/docs.
-2. Keep updating this checklist after each verified push.
+2. Add CI/CD automation for backend (Cloud Run) and frontend (Firebase Hosting) deploys.
+3. Keep updating this checklist after each verified push.
 3. Do not start UI work until retrieval and citations are working and tested.
 
 ## Cloud Run Deployment (Iteration 11)

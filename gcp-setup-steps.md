@@ -20,7 +20,9 @@ Related docs:
 - Cloud Run updated with Cloud SQL + secret + env vars ✅
 - Cloud SQL migrations (`001`–`004`) applied ✅
 - `pgvector` extension enabled in Cloud SQL ✅
-- DB-backed cloud endpoint retest: pending (next step) ⏳
+- DB-backed cloud endpoints working (`/evals/runs`, `/ingest/text`, `rag=true`) ✅
+- Firebase Hosting frontend deployed and connected to Cloud Run ✅
+- Real Gemini generation + real Gemini embeddings proven in cloud ✅
 
 ## 0. Set Active Project
 
@@ -379,3 +381,212 @@ When we complete a new cloud step:
 - add any errors/fixes encountered
 
 This file should remain chronological and operational (not a general reference).
+
+## 18. Cloud DB-Backed Retest Completed (After Migrations)
+
+Retested DB-backed endpoints on Cloud Run after Cloud SQL wiring + migrations:
+
+```bash
+curl -s "$CLOUD_RUN_URL/evals/runs"
+curl -s -X POST "$CLOUD_RUN_URL/ingest/text" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Cloud RAG Doc","content":"Paris is the capital of France. Berlin is the capital of Germany."}'
+curl -s -X POST "$CLOUD_RUN_URL/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"What is the capital of France?","provider":"gemini","rag":true,"top_k":2,"debug":true}'
+```
+
+Observed result:
+- `/evals/runs` returned `[]` (no `500`) ✅
+- `/ingest/text` succeeded ✅
+- `rag=true` returned citations + retrieved chunks ✅
+- At this stage, provider + embeddings were still stubbed ✅
+
+## 19. Firebase Hosting Frontend Deploy (Recruiter Demo URL)
+
+Frontend hosting deploy:
+
+```bash
+firebase deploy --only hosting
+```
+
+Observed result:
+- Firebase Hosting URL: `https://multi-model-rag-5713b.web.app` ✅
+
+Cloud Run CORS was updated to include:
+- `https://multi-model-rag-5713b.web.app`
+- `https://multi-model-rag-5713b.firebaseapp.com`
+
+Observed result:
+- Hosted UI successfully called Cloud Run backend in browser ✅
+- RAG citations + retrieved chunks visible in hosted UI ✅
+
+## 20. Real Gemini + Real Gemini Embeddings in Cloud (Chronology)
+
+### 20.1 Local real embedding attempts blocked by local SSL runtime issue
+
+Observed locally:
+- Real Gemini embedding path failed during `google-genai` import chain (`aiohttp` -> `ssl.create_default_context()`) with `ssl.SSLError`
+- Local code checks still passed (`ruff`, `mypy`, `pytest`) ✅
+
+Decision:
+- prioritize cloud-first validation for real provider + embeddings ✅
+
+### 20.2 `GEMINI_API_KEY` Secret Manager setup
+
+First attempt failed because shell env var was empty:
+- `Secret Payload cannot be empty`
+
+Then created secret + valid version:
+
+```bash
+echo -n "..." | gcloud secrets versions add GEMINI_API_KEY --data-file=-
+```
+
+Observed result:
+- `GEMINI_API_KEY` secret has a valid version ✅
+
+Also granted Cloud Run service account access:
+
+```bash
+gcloud secrets add-iam-policy-binding GEMINI_API_KEY \
+  --project="$PROJECT_ID" \
+  --member="serviceAccount:${RUN_SA}" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
+### 20.3 Enable real runtime modes on Cloud Run
+
+Working command used:
+
+```bash
+gcloud run services update "$CLOUD_RUN_SERVICE" \
+  --project="$PROJECT_ID" \
+  --region="$REGION" \
+  --add-cloudsql-instances="$INSTANCE_CONN_NAME" \
+  --set-secrets="DATABASE_URL=${DB_URL_SECRET}:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest" \
+  --update-env-vars="^@^LLM_PROVIDER_MODE=real@EMBEDDING_PROVIDER_MODE=real@EMBEDDING_PROVIDER=gemini@GEMINI_EMBEDDING_MODEL=gemini-embedding-001@CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,https://multi-model-rag-5713b.web.app,https://multi-model-rag-5713b.firebaseapp.com@LOG_LEVEL=info@ENABLE_TRACING=true@DEFAULT_PROVIDER=gemini@DEFAULT_ROUTING_MODE=manual"
+```
+
+### 20.4 Real-mode failures and fixes (important)
+
+Problem A:
+- `make deploy-cloud-run` reset Cloud Run env vars to deploy defaults (stub mode)
+- symptom: endpoints still returned stub results after rebuild
+
+Fix:
+- re-run the Cloud Run `gcloud run services update ... --update-env-vars ...` command after each deploy ✅
+
+Problem B:
+- Cloud Run real mode returned `500`
+- logs showed:
+  - `ModuleNotFoundError: No module named 'google'`
+  - `google-genai package is required ...`
+
+Root cause:
+- Dockerfile builds with `uv sync --frozen --no-dev`
+- image deps come from `uv.lock`
+- updating `pyproject.toml` alone was not enough
+
+Fix:
+1. Move `google-genai` / `openai` into runtime `[project].dependencies`
+2. Regenerate lockfile:
+
+```bash
+uv lock
+```
+
+3. Rebuild/redeploy backend:
+
+```bash
+source .env.deploy.local
+make deploy-cloud-run
+```
+
+4. Re-apply real Cloud Run env vars/secrets (because deploy reset them)
+
+### 20.5 Final cloud proof (real mode working)
+
+Ingest with real embeddings:
+
+```bash
+curl -s -X POST "$CLOUD_RUN_URL/ingest/text" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Real Embedding Cloud Doc 6","content":"Tokyo is the capital of Japan."}'
+```
+
+Observed result:
+- `embedding_provider: "gemini"` ✅
+- `embedding_model: "gemini-embedding-001"` ✅
+
+RAG chat with real Gemini:
+
+```bash
+curl -s -X POST "$CLOUD_RUN_URL/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"What is the capital of Japan?","provider":"gemini","rag":true,"debug":true}'
+```
+
+Observed result:
+- real Gemini answer (no `[stub:gemini]`) ✅
+- real `latency_ms`, `tokens_in`, `tokens_out` populated ✅
+- citations + retrieved chunks returned ✅
+
+## 21. Security Follow-Up (Now Includes Gemini Key Rotation)
+
+In addition to DB password / `DATABASE_URL` rotation:
+- `GEMINI_API_KEY` was pasted in terminal/chat during setup/testing
+
+Recommended after demo stabilization:
+1. Rotate Gemini API key in Google AI Studio / provider console
+2. Add new Secret Manager version for `GEMINI_API_KEY`
+3. Re-run Cloud Run update (or deploy) so runtime uses `:latest`
+
+## 22. Real-Mode Eval Comparison (Cloud Run)
+
+Goal:
+- Compare real Gemini + real Gemini embeddings behavior against the existing eval dataset/baseline.
+
+Important discovery:
+- `scripts/eval_run.py` defaults to `http://localhost:8000`
+- setting `API_BASE_URL` in shell does **not** affect the script
+- must pass `--api-base-url` explicitly
+
+Incorrect command (hit local default, produced all-zero fallback summary):
+
+```bash
+uv run python scripts/eval_run.py --limit 3 --output .tmp/eval_real.json
+```
+
+Observed result (invalid for cloud comparison):
+- `passed_cases = 0`
+- `avg_latency_ms = 0.0`
+- all quality scores `0.0` except hallucination `1.0`
+
+Correct command (Cloud Run target):
+
+```bash
+uv run python scripts/eval_run.py \
+  --api-base-url "https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app" \
+  --limit 3 \
+  --output .tmp/eval_real.json
+```
+
+Observed result (real-mode cloud eval):
+
+```json
+{
+  "total_cases": 3,
+  "passed_cases": 1,
+  "avg_latency_ms": 946.0,
+  "correctness_avg": 0.3333,
+  "groundedness_avg": 0.6667,
+  "hallucination_avg": 0.6667
+}
+```
+
+Interpretation:
+- eval runner successfully hit Cloud Run ✅
+- real model latency is visible (non-zero, ~946 ms average) ✅
+- scores differ from stub mode and provide a new quality baseline signal ✅
+- current baseline gate may fail vs stub-era baseline (expected and informative) ⚠️

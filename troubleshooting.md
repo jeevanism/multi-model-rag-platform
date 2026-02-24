@@ -340,6 +340,139 @@ gcloud sql users set-password "$DB_USER" \
 3. Ensure Cloud Run uses `:latest` (already configured).
 4. Avoid `echo "$DATABASE_URL"` in future.
 
+## 15. `GEMINI_API_KEY` secret create/update failed because payload was empty
+
+### Error
+
+```text
+INVALID_ARGUMENT: Secret Payload cannot be empty.
+```
+
+### Root cause
+
+The `GEMINI_API_KEY` environment variable was not set in the current shell, so:
+
+```bash
+printf '%s' "$GEMINI_API_KEY"
+```
+
+produced an empty payload.
+
+### Fix
+
+Set/export the key in the current shell first, then add the secret version:
+
+```bash
+export GEMINI_API_KEY='...'
+printf '%s' "$GEMINI_API_KEY" | gcloud secrets versions add GEMINI_API_KEY \
+  --project="$PROJECT_ID" \
+  --data-file=-
+```
+
+## 16. Cloud Run update failed because secret existed but had no versions
+
+### Error
+
+```text
+Secret .../secrets/GEMINI_API_KEY/versions/latest was not found
+```
+
+### Root cause
+
+The secret resource `GEMINI_API_KEY` existed, but no valid version had been created yet.
+
+### Fix
+
+Add a valid secret version first, then rerun `gcloud run services update`:
+
+```bash
+printf '%s' "$GEMINI_API_KEY" | gcloud secrets versions add GEMINI_API_KEY \
+  --project="$PROJECT_ID" \
+  --data-file=-
+```
+
+## 17. `make deploy-cloud-run` reverted Cloud Run runtime env vars back to stub mode
+
+### Symptom
+
+After a successful backend image deploy:
+- `/ingest/text` still returned `"embedding_provider":"stub"`
+- `/chat` still returned `[stub:gemini]`
+
+### Root cause
+
+The deploy script applies its own env vars/defaults during deploy, which reset runtime settings to stub mode.
+
+### Fix / Best practice
+
+After each `make deploy-cloud-run`, re-run the Cloud Run update command that sets:
+- `LLM_PROVIDER_MODE=real`
+- `EMBEDDING_PROVIDER_MODE=real`
+- `EMBEDDING_PROVIDER=gemini`
+- `GEMINI_EMBEDDING_MODEL=gemini-embedding-001`
+- Firebase + localhost CORS origins
+
+## 18. Cloud Run real mode returned `500` because `google-genai` was missing from the image
+
+### Error (from Cloud Run logs)
+
+```text
+ModuleNotFoundError: No module named 'google'
+RuntimeError: google-genai package is required for real Gemini embeddings ...
+```
+
+### Root cause
+
+The Docker build uses:
+
+```bash
+uv sync --frozen --no-dev
+```
+
+so image dependencies come from `uv.lock`.
+
+`pyproject.toml` was updated, but `uv.lock` was stale, so the image still did not include `google-genai`.
+
+### Fix
+
+1. Ensure `google-genai` / `openai` are in runtime `[project].dependencies`
+2. Regenerate lockfile:
+
+```bash
+uv lock
+```
+
+3. Rebuild/redeploy backend image:
+
+```bash
+source .env.deploy.local
+make deploy-cloud-run
+```
+
+4. Re-apply Cloud Run real-mode env vars (deploy script reset)
+
+## 19. Cloud Run `500` debugging for real-mode rollout (working sequence)
+
+### Best debugging order
+
+1. Confirm deployed image revision changed (`make deploy-cloud-run` output)
+2. Re-apply runtime env vars with `gcloud run services update ... --update-env-vars ...`
+3. Run cloud endpoint smoke calls (`/ingest/text`, `/chat` with `rag=true`)
+4. Read Cloud Run logs immediately:
+
+```bash
+gcloud run services logs read "$CLOUD_RUN_SERVICE" \
+  --region="$REGION" \
+  --project="$PROJECT_ID" \
+  --limit=100
+```
+
+This sequence quickly distinguishes:
+- stub mode still active
+- missing secret/version
+- missing SDK in image
+- API/runtime errors in real provider/embedding paths
+
 ## Quick Cloud Sanity Checklist
 
 Use this order when cloud features fail:
