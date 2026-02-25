@@ -8,8 +8,8 @@ Purpose:
 
 
 Related docs:
-- `gcp-commands.md` (command reference)
-- `troubleshooting.md` (GCP-only errors and fixes)
+- `docs/gcp-commands.md` (command reference)
+- `docs/troubleshooting.md` (GCP-only errors and fixes)
 
 ## Current Status (As Of Latest Update)
 

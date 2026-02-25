@@ -169,10 +169,10 @@ If Cloud SQL is paused:
 ## 10. Commands / Related Docs
 
 See:
-- `gcp-commands.md` (Cloud SQL, Cloud Run, secrets, logs)
-- `gcp-setup-steps.md` (what we ran)
-- `troubleshooting.md` (GCP errors/fixes)
-- `RAG-TEST.md` (positive/negative RAG proof cases)
+- `docs/gcp-commands.md` (Cloud SQL, Cloud Run, secrets, logs)
+- `docs/gcp-setup-steps.md` (what we ran)
+- `docs/troubleshooting.md` (GCP errors/fixes)
+- `docs/RAG-TEST.md` (positive/negative RAG proof cases)
 
 ## 11. TODO (Database Evolution)
 

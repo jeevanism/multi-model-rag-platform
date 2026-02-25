@@ -192,9 +192,8 @@ We have already achieved:
 
 Use these documents for setup, troubleshooting, and reproducible demos:
 - `README.md` — recruiter-facing project overview + live links
-- `gcp-commands.md` — reusable GCP command reference
-- `gcp-setup-steps.md` — chronological cloud setup/deploy runbook
-- `troubleshooting.md` — cloud issues and fixes
-- `RAG-TEST.md` — positive/negative RAG test cases and proof criteria
-- `database_design.md` — schema and vector design notes
-- `python-practice.md` — engineering standards and quality gates
+- `docs/gcp-commands.md` — reusable GCP command reference
+- `docs/gcp-setup-steps.md` — chronological cloud setup/deploy runbook
+- `docs/troubleshooting.md` — cloud issues and fixes
+- `docs/RAG-TEST.md` — positive/negative RAG test cases and proof criteria
+- `docs/database_design.md` — schema and vector design notes

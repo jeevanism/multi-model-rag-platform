@@ -135,12 +135,11 @@ uv run pytest -q
 ## Cloud / Ops Runbooks
 Use these docs for setup, troubleshooting, and reproducible cloud commands:
 
-- `gcp-commands.md` - reusable GCP command reference (Cloud Run, Cloud SQL, Secret Manager, logs, eval commands)
-- `gcp-setup-steps.md` - chronological cloud setup + deployment steps actually performed
-- `troubleshooting.md` - GCP/cloud issues encountered and how they were fixed
-- `RAG-TEST.md` - positive/negative RAG test plan and proof criteria
-- `database_design.md` - schema/data model notes, `pgvector` design, embedding dimension decisions
-- `python-practice.md` - engineering standards and quality gates
+- `docs/gcp-commands.md` - reusable GCP command reference (Cloud Run, Cloud SQL, Secret Manager, logs, eval commands)
+- `docs/gcp-setup-steps.md` - chronological cloud setup + deployment steps actually performed
+- `docs/troubleshooting.md` - GCP/cloud issues encountered and how they were fixed
+- `docs/RAG-TEST.md` - positive/negative RAG test plan and proof criteria
+- `docs/database_design.md` - schema/data model notes, `pgvector` design, embedding dimension decisions
 
 ## Demo Notes (For Reviewers)
 - The hosted demo is real cloud infrastructure (not localhost).
@@ -149,5 +148,4 @@ Use these docs for setup, troubleshooting, and reproducible cloud commands:
 
 ## Repo History / Build Approach
 This project was built iteratively (small slices with tests + proof commands + pushes), and the detailed planning artifacts remain in:
-- `project_plan.md`
-- `iteration_plan.md`
+- `docs/project_plan.md`

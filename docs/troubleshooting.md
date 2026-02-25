@@ -10,7 +10,7 @@ Scope:
 - Cloud SQL Proxy / auth for migrations
 
 Related reference:
-- `gcp-commands.md` (copy/paste command catalog)
+- `docs/gcp-commands.md` (copy/paste command catalog)
 
 ## 1. `make deploy-cloud-run` failed with missing env vars
 

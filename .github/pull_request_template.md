@@ -14,7 +14,7 @@
 - [ ] Behavior verified manually where applicable
 - [ ] Added or updated tests for changed behavior
 
-## Quality Gates (from `python-practice.md`)
+## Quality Gates (from `README.md`)
 - [ ] `uv run ruff check .`
 - [ ] `uv run ruff format --check .` (or formatted with `uv run ruff format .`)
 - [ ] `uv run mypy apps/api tests`
