@@ -13,6 +13,8 @@ Production-oriented RAG application built end-to-end with:
 - Frontend (Firebase): `https://multi-model-rag-5713b.web.app`
 - Backend API (Cloud Run): `https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app`
 - API docs (Swagger): `https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app/docs`
+- [![Demo Video](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
+
 
 Note:
 - I pause Cloud SQL outside demo/testing windows to control billing on a personal GCP account.
