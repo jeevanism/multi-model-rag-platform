@@ -19,7 +19,7 @@ Note:
 - If DB is paused, DB-backed features (`/ingest/text`, `/evals/*`, `rag=true`) will fail until Cloud SQL is resumed.
 
 ## Project Goal
-Build a portfolio-grade, production-shaped RAG system that demonstrates:
+Build a production-grade, production-shaped RAG system that demonstrates:
 - model abstraction (multi-provider design)
 - retrieval + grounding + citations
 - evaluation and regression safety
