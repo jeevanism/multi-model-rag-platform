@@ -2,8 +2,6 @@
 
 This file is a working command reference for deploying and operating the `multi-model-rag-platform` project on Google Cloud.
 
-Use it as a copy/paste checklist. Update it whenever we add a new GCP step.
-
 ## 1. Project Setup
 
 Set the active project:
@@ -65,7 +63,7 @@ make deploy-cloud-run
 Fish shell:
 
 ```fish
-bash -lc 'cd /home/jeevanism/Documents/Projects/AI-Engineering/multi-model-RAG && source .env.deploy.local && make deploy-cloud-run'
+bash -lc 'cd <repo-root> && source .env.deploy.local && make deploy-cloud-run'
 ```
 
 ## 4. Cloud Run Verification
@@ -73,7 +71,7 @@ bash -lc 'cd /home/jeevanism/Documents/Projects/AI-Engineering/multi-model-RAG &
 Use deployed backend URL:
 
 ```bash
-export CLOUD_RUN_URL="https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app"
+export CLOUD_RUN_URL="https://<CLOUD_RUN_URL>"
 ```
 
 Health:
@@ -317,10 +315,10 @@ gcloud sql connect "$SQL_INSTANCE" \
 At the `psql` prompt:
 
 ```sql
-\i /home/jeevanism/Documents/Projects/AI-Engineering/multi-model-RAG/migrations/001_init.sql
-\i /home/jeevanism/Documents/Projects/AI-Engineering/multi-model-RAG/migrations/002_rag_schema.sql
-\i /home/jeevanism/Documents/Projects/AI-Engineering/multi-model-RAG/migrations/003_evals_schema.sql
-\i /home/jeevanism/Documents/Projects/AI-Engineering/multi-model-RAG/migrations/004_eval_scores.sql
+\i <repo-root>/migrations/001_init.sql
+\i <repo-root>/migrations/002_rag_schema.sql
+\i <repo-root>/migrations/003_evals_schema.sql
+\i <repo-root>/migrations/004_eval_scores.sql
 ```
 
 Basic verification in `psql`:
@@ -361,15 +359,15 @@ curl -s -X POST "$CLOUD_RUN_URL/chat" \
 Create `apps/web/.env.local`:
 
 ```bash
-cat > /home/jeevanism/Documents/Projects/AI-Engineering/multi-model-RAG/apps/web/.env.local <<'EOF'
-VITE_API_BASE_URL=https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app
+cat > <repo-root>/apps/web/.env.local <<'EOF'
+VITE_API_BASE_URL=https://<CLOUD_RUN_URL>
 EOF
 ```
 
 Run frontend:
 
 ```bash
-cd /home/jeevanism/Documents/Projects/AI-Engineering/multi-model-RAG/apps/web
+cd <repo-root>/apps/web
 npm run dev
 ```
 
@@ -449,7 +447,7 @@ gcloud run services update "$CLOUD_RUN_SERVICE" \
   --region="$REGION" \
   --add-cloudsql-instances="$INSTANCE_CONN_NAME" \
   --set-secrets="DATABASE_URL=${DB_URL_SECRET}:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest" \
-  --update-env-vars="^@^LLM_PROVIDER_MODE=real@EMBEDDING_PROVIDER_MODE=real@EMBEDDING_PROVIDER=gemini@GEMINI_EMBEDDING_MODEL=gemini-embedding-001@CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,https://multi-model-rag-5713b.web.app,https://multi-model-rag-5713b.firebaseapp.com@LOG_LEVEL=info@ENABLE_TRACING=true@DEFAULT_PROVIDER=gemini@DEFAULT_ROUTING_MODE=manual"
+  --update-env-vars="^@^LLM_PROVIDER_MODE=real@EMBEDDING_PROVIDER_MODE=real@EMBEDDING_PROVIDER=gemini@GEMINI_EMBEDDING_MODEL=gemini-embedding-001@CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,https://<FIREBASE_HOSTING_URL>,https://<FIREBASE_FALLBACK_HOSTING_URL>@LOG_LEVEL=info@ENABLE_TRACING=true@DEFAULT_PROVIDER=gemini@DEFAULT_ROUTING_MODE=manual"
 ```
 
 Rebuild/redeploy note (important):
@@ -493,7 +491,7 @@ Run eval against Cloud Run (save payload JSON):
 
 ```bash
 uv run python scripts/eval_run.py \
-  --api-base-url "https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app" \
+  --api-base-url "https://<CLOUD_RUN_URL>" \
   --limit 3 \
   --output .tmp/eval_real.json
 ```
@@ -508,7 +506,7 @@ Persist eval run to DB (shows in Evals dashboard):
 
 ```bash
 uv run python scripts/eval_run.py \
-  --api-base-url "https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app" \
+  --api-base-url "https://<CLOUD_RUN_URL>" \
   --limit 3 \
   --persist \
   --output .tmp/eval_real.json
@@ -523,5 +521,5 @@ cat .tmp/eval_real.json
 Useful follow-up:
 
 ```bash
-curl -s "https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app/evals/runs"
+curl -s "https://<CLOUD_RUN_URL>/evals/runs"
 ```

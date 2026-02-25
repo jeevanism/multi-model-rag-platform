@@ -1,11 +1,11 @@
 # GCP Setup Steps (Chronological Runbook)
 
-This file is a chronological, copy/paste-friendly record of the Google Cloud setup steps we performed for this project.
+This file is a chronological, copy/paste-friendly record of the Google Cloud setup steps performed for this project.
 
 Purpose:
 - Track exactly what was done
 - Reproduce setup later
-- Continue appending as we complete more cloud work
+
 
 Related docs:
 - `gcp-commands.md` (command reference)
@@ -13,16 +13,16 @@ Related docs:
 
 ## Current Status (As Of Latest Update)
 
-- Cloud Run backend deployed ✅
-- Cloud SQL (Postgres 16) instance created ✅
-- Cloud SQL database + user password configured ✅
-- Secret Manager `DATABASE_URL` created ✅
-- Cloud Run updated with Cloud SQL + secret + env vars ✅
-- Cloud SQL migrations (`001`–`004`) applied ✅
-- `pgvector` extension enabled in Cloud SQL ✅
-- DB-backed cloud endpoints working (`/evals/runs`, `/ingest/text`, `rag=true`) ✅
-- Firebase Hosting frontend deployed and connected to Cloud Run ✅
-- Real Gemini generation + real Gemini embeddings proven in cloud ✅
+- Cloud Run backend deployed  
+- Cloud SQL (Postgres 16) instance created  
+- Cloud SQL database + user password configured  
+- Secret Manager `DATABASE_URL` created  
+- Cloud Run updated with Cloud SQL + secret + env vars  
+- Cloud SQL migrations (`001`–`004`) applied  
+- `pgvector` extension enabled in Cloud SQL  
+- DB-backed cloud endpoints working (`/evals/runs`, `/ingest/text`, `rag=true`)  
+- Firebase Hosting frontend deployed and connected to Cloud Run  
+- Real Gemini generation + real Gemini embeddings proven in cloud  
 
 ## 0. Set Active Project
 
@@ -62,7 +62,7 @@ gcloud services enable \
 ```
 
 Observed result:
-- Operation completed successfully ✅
+- Operation completed successfully  
 
 ## 3. Backend Cloud Run Deploy (Using Local Ignored Env File)
 
@@ -90,15 +90,15 @@ make deploy-cloud-run
 ```
 
 Observed result:
-- Cloud Build succeeded ✅
-- Cloud Run deployed ✅
-- Service URL available ✅
-- `/health` post-deploy smoke passed ✅
+- Cloud Build succeeded  
+- Cloud Run deployed  
+- Service URL available  
+- `/health` post-deploy smoke passed  
 
 Deployed backend URL:
 
 ```text
-https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app
+https://<CLOUD_RUN_URL>
 ```
 
 ## 4. Initial Cloud Run Verification (Before Cloud SQL)
@@ -106,13 +106,13 @@ https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app
 Worked:
 
 ```bash
-curl -s https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app/health
+curl -s https://<CLOUD_RUN_URL>/health
 
-curl -s -X POST https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app/chat \
+curl -s -X POST https://<CLOUD_RUN_URL>/chat \
   -H "Content-Type: application/json" \
   -d '{"message":"hello from cloud","provider":"gemini"}'
 
-curl -N -X POST https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app/chat/stream \
+curl -N -X POST https://<CLOUD_RUN_URL>/chat/stream \
   -H "Content-Type: application/json" \
   -d '{"message":"hello stream","provider":"gemini"}'
 ```
@@ -120,9 +120,9 @@ curl -N -X POST https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app/chat/stream 
 Failed (expected before DB setup):
 
 ```bash
-curl -s https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app/evals/runs
-curl -s https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app/evals/runs/2
-curl -s -X POST https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app/chat \
+curl -s https://<CLOUD_RUN_URL>/evals/runs
+curl -s https://<CLOUD_RUN_URL>/evals/runs/2
+curl -s -X POST https://<CLOUD_RUN_URL>/chat \
   -H "Content-Type: application/json" \
   -d '{"message":"What is the capital of France?","provider":"gemini","rag":true,"top_k":2,"debug":true}'
 ```
@@ -141,7 +141,7 @@ gcloud run services logs read multi-model-rag-api \
 
 Observed result:
 - `sqlalchemy` / `psycopg` `OperationalError`
-- connection to `127.0.0.1:5432` refused ✅ (confirmed DB config missing in cloud)
+- connection to `127.0.0.1:5432` refused   (confirmed DB config missing in cloud)
 
 ## 6. Create Cloud SQL Postgres Instance
 
@@ -171,8 +171,8 @@ gcloud sql instances create "$SQL_INSTANCE" \
 ```
 
 Observed result:
-- Instance created ✅
-- Status `RUNNABLE` ✅
+- Instance created  
+- Status `RUNNABLE`  
 
 ## 7. Set Cloud SQL DB Password and Create Database
 
@@ -201,8 +201,8 @@ gcloud sql databases create "$DB_NAME" \
 ```
 
 Observed result:
-- User password updated ✅
-- Database `multimodel_rag` created ✅
+- User password updated  
+- Database `multimodel_rag` created  
 
 ## 8. Get Cloud SQL Connection Name
 
@@ -237,8 +237,8 @@ printf '%s' "$DATABASE_URL" | gcloud secrets create "$DB_URL_SECRET" \
 ```
 
 Observed result:
-- Secret created ✅
-- Version `1` created ✅
+- Secret created  
+- Version `1` created  
 
 Security note:
 - Avoid echoing the full `DATABASE_URL` in future (contains password).
@@ -258,7 +258,7 @@ echo "$RUN_SA"
 Observed result:
 
 ```text
-333316966566-compute@developer.gserviceaccount.com
+<PROJECT_NUMBER>-compute@developer.gserviceaccount.com
 ```
 
 Grant secret access:
@@ -271,7 +271,7 @@ gcloud secrets add-iam-policy-binding "$DB_URL_SECRET" \
 ```
 
 Observed result:
-- IAM binding updated ✅
+- IAM binding updated  
 
 ## 11. Update Cloud Run With Cloud SQL + Secret + Env Vars
 
@@ -289,12 +289,12 @@ gcloud run services update "$CLOUD_RUN_SERVICE" \
 ```
 
 Observed result:
-- New revision deployed ✅
-- Traffic routed to new revision ✅
+- New revision deployed  
+- Traffic routed to new revision  
 
 ## 12. Install Cloud SQL Proxy Binary (Required for `gcloud sql connect`)
 
-`gcloud components install cloud-sql-proxy` was unavailable in the packaged CLI, so we installed manually:
+`gcloud components install cloud-sql-proxy` was unavailable in the packaged CLI, installed manually:
 
 ```bash
 curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.21.1/cloud-sql-proxy.linux.amd64
@@ -303,7 +303,7 @@ sudo mv cloud-sql-proxy /usr/local/bin/
 ```
 
 Observed result:
-- `gcloud sql connect` could find the proxy ✅
+- `gcloud sql connect` could find the proxy  
 
 ## 13. Configure ADC (Application Default Credentials) for Cloud SQL Proxy
 
@@ -317,7 +317,7 @@ gcloud auth application-default set-quota-project "$PROJECT_ID"
 ```
 
 Observed result:
-- ADC configured ✅
+- ADC configured  
 
 ## 14. Connect to Cloud SQL and Run Migrations
 
@@ -333,10 +333,10 @@ gcloud sql connect "$SQL_INSTANCE" \
 At `psql` prompt, run:
 
 ```sql
-\i /home/jeevanism/Documents/Projects/AI-Engineering/multi-model-RAG/migrations/001_init.sql
-\i /home/jeevanism/Documents/Projects/AI-Engineering/multi-model-RAG/migrations/002_rag_schema.sql
-\i /home/jeevanism/Documents/Projects/AI-Engineering/multi-model-RAG/migrations/003_evals_schema.sql
-\i /home/jeevanism/Documents/Projects/AI-Engineering/multi-model-RAG/migrations/004_eval_scores.sql
+\i <repo-root>/migrations/001_init.sql
+\i <repo-root>/migrations/002_rag_schema.sql
+\i <repo-root>/migrations/003_evals_schema.sql
+\i <repo-root>/migrations/004_eval_scores.sql
 ```
 
 Verification queries:
@@ -348,9 +348,9 @@ SELECT COUNT(*) FROM eval_run;
 ```
 
 Observed result:
-- `vector` extension exists ✅
-- tables created ✅
-- counts start at `0` ✅
+- `vector` extension exists  
+- tables created  
+- counts start at `0`  
 
 ## 15. Next Steps (To Append After Completion)
 
@@ -373,16 +373,8 @@ After cloud validation is complete:
 2. Add new Secret Manager version for `DATABASE_URL`
 3. Ensure Cloud Run uses `:latest` (already configured)
 
-## 17. Update Policy For This File
 
-When we complete a new cloud step:
-- add the exact command(s)
-- add the observed result
-- add any errors/fixes encountered
-
-This file should remain chronological and operational (not a general reference).
-
-## 18. Cloud DB-Backed Retest Completed (After Migrations)
+## 17. Cloud DB-Backed Retest Completed (After Migrations)
 
 Retested DB-backed endpoints on Cloud Run after Cloud SQL wiring + migrations:
 
@@ -397,12 +389,12 @@ curl -s -X POST "$CLOUD_RUN_URL/chat" \
 ```
 
 Observed result:
-- `/evals/runs` returned `[]` (no `500`) ✅
-- `/ingest/text` succeeded ✅
-- `rag=true` returned citations + retrieved chunks ✅
-- At this stage, provider + embeddings were still stubbed ✅
+- `/evals/runs` returned `[]` (no `500`)  
+- `/ingest/text` succeeded  
+- `rag=true` returned citations + retrieved chunks  
+- At this stage, provider + embeddings were still stubbed  
 
-## 19. Firebase Hosting Frontend Deploy (Recruiter Demo URL)
+## 19. Firebase Hosting Frontend Deploy  
 
 Frontend hosting deploy:
 
@@ -411,15 +403,15 @@ firebase deploy --only hosting
 ```
 
 Observed result:
-- Firebase Hosting URL: `https://multi-model-rag-5713b.web.app` ✅
+- Firebase Hosting URL: `https://<FIREBASE_HOSTING_URL>`  
 
 Cloud Run CORS was updated to include:
-- `https://multi-model-rag-5713b.web.app`
-- `https://multi-model-rag-5713b.firebaseapp.com`
+- `https://<FIREBASE_HOSTING_URL>`
+- `https://<FIREBASE_FALLBACK_HOSTING_URL>`
 
 Observed result:
-- Hosted UI successfully called Cloud Run backend in browser ✅
-- RAG citations + retrieved chunks visible in hosted UI ✅
+- Hosted UI successfully called Cloud Run backend in browser  
+- RAG citations + retrieved chunks visible in hosted UI  
 
 ## 20. Real Gemini + Real Gemini Embeddings in Cloud (Chronology)
 
@@ -427,10 +419,10 @@ Observed result:
 
 Observed locally:
 - Real Gemini embedding path failed during `google-genai` import chain (`aiohttp` -> `ssl.create_default_context()`) with `ssl.SSLError`
-- Local code checks still passed (`ruff`, `mypy`, `pytest`) ✅
+- Local code checks still passed (`ruff`, `mypy`, `pytest`)  
 
 Decision:
-- prioritize cloud-first validation for real provider + embeddings ✅
+- prioritize cloud-first validation for real provider + embeddings  
 
 ### 20.2 `GEMINI_API_KEY` Secret Manager setup
 
@@ -444,7 +436,7 @@ echo -n "..." | gcloud secrets versions add GEMINI_API_KEY --data-file=-
 ```
 
 Observed result:
-- `GEMINI_API_KEY` secret has a valid version ✅
+- `GEMINI_API_KEY` secret has a valid version  
 
 Also granted Cloud Run service account access:
 
@@ -465,7 +457,7 @@ gcloud run services update "$CLOUD_RUN_SERVICE" \
   --region="$REGION" \
   --add-cloudsql-instances="$INSTANCE_CONN_NAME" \
   --set-secrets="DATABASE_URL=${DB_URL_SECRET}:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest" \
-  --update-env-vars="^@^LLM_PROVIDER_MODE=real@EMBEDDING_PROVIDER_MODE=real@EMBEDDING_PROVIDER=gemini@GEMINI_EMBEDDING_MODEL=gemini-embedding-001@CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,https://multi-model-rag-5713b.web.app,https://multi-model-rag-5713b.firebaseapp.com@LOG_LEVEL=info@ENABLE_TRACING=true@DEFAULT_PROVIDER=gemini@DEFAULT_ROUTING_MODE=manual"
+  --update-env-vars="^@^LLM_PROVIDER_MODE=real@EMBEDDING_PROVIDER_MODE=real@EMBEDDING_PROVIDER=gemini@GEMINI_EMBEDDING_MODEL=gemini-embedding-001@CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,https://<FIREBASE_HOSTING_URL>,https://<FIREBASE_FALLBACK_HOSTING_URL>@LOG_LEVEL=info@ENABLE_TRACING=true@DEFAULT_PROVIDER=gemini@DEFAULT_ROUTING_MODE=manual"
 ```
 
 ### 20.4 Real-mode failures and fixes (important)
@@ -475,7 +467,7 @@ Problem A:
 - symptom: endpoints still returned stub results after rebuild
 
 Fix:
-- re-run the Cloud Run `gcloud run services update ... --update-env-vars ...` command after each deploy ✅
+- re-run the Cloud Run `gcloud run services update ... --update-env-vars ...` command after each deploy  
 
 Problem B:
 - Cloud Run real mode returned `500`
@@ -516,8 +508,8 @@ curl -s -X POST "$CLOUD_RUN_URL/ingest/text" \
 ```
 
 Observed result:
-- `embedding_provider: "gemini"` ✅
-- `embedding_model: "gemini-embedding-001"` ✅
+- `embedding_provider: "gemini"`  
+- `embedding_model: "gemini-embedding-001"`  
 
 RAG chat with real Gemini:
 
@@ -528,9 +520,9 @@ curl -s -X POST "$CLOUD_RUN_URL/chat" \
 ```
 
 Observed result:
-- real Gemini answer (no `[stub:gemini]`) ✅
-- real `latency_ms`, `tokens_in`, `tokens_out` populated ✅
-- citations + retrieved chunks returned ✅
+- real Gemini answer (no `[stub:gemini]`)  
+- real `latency_ms`, `tokens_in`, `tokens_out` populated  
+- citations + retrieved chunks returned  
 
 ## 21. Security Follow-Up (Now Includes Gemini Key Rotation)
 
@@ -567,7 +559,7 @@ Correct command (Cloud Run target):
 
 ```bash
 uv run python scripts/eval_run.py \
-  --api-base-url "https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app" \
+  --api-base-url "https://<CLOUD_RUN_URL>" \
   --limit 3 \
   --output .tmp/eval_real.json
 ```
@@ -586,7 +578,7 @@ Observed result (real-mode cloud eval):
 ```
 
 Interpretation:
-- eval runner successfully hit Cloud Run ✅
-- real model latency is visible (non-zero, ~946 ms average) ✅
-- scores differ from stub mode and provide a new quality baseline signal ✅
+- eval runner successfully hit Cloud Run  
+- real model latency is visible (non-zero, ~946 ms average)  
+- scores differ from stub mode and provide a new quality baseline signal  
 - current baseline gate may fail vs stub-era baseline (expected and informative) ⚠️
