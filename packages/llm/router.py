@@ -4,6 +4,7 @@ import os
 
 from packages.llm.base import LLMProvider
 from packages.llm.providers.gemini import GeminiProvider
+from packages.llm.providers.grok import GrokProvider
 from packages.llm.providers.openai import OpenAIProvider
 
 
@@ -23,7 +24,9 @@ def get_provider(provider: str, model: str | None = None) -> LLMProvider:
         return GeminiProvider(model=model or "gemini-2.5-flash", mode=mode)
     if normalized == "openai":
         return OpenAIProvider(model=model or "gpt-4.1-mini", mode=mode)
+    if normalized == "grok":
+        return GrokProvider(model=model or "grok-3-mini", mode=mode)
 
     raise UnsupportedProviderError(
-        f"Unsupported provider '{provider}'. Supported values: gemini, openai."
+        f"Unsupported provider '{provider}'. Supported values: gemini, openai, grok."
     )

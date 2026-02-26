@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import "./index.css";
 
-type Provider = "gemini" | "openai";
+type Provider = "gemini" | "openai" | "grok";
 type Mode = "json" | "stream";
 type View = "chat" | "evals";
 
@@ -130,7 +130,9 @@ function App() {
   }, [selectedEvalRunId]);
 
   const providerPlaceholder = useMemo(() => {
-    return provider === "gemini" ? "gemini-2.5-flash" : "gpt-4.1-mini";
+    if (provider === "gemini") return "gemini-2.5-flash";
+    if (provider === "grok") return "grok-3-mini";
+    return "gpt-4.1-mini";
   }, [provider]);
 
   async function loadEvalRuns() {
@@ -422,6 +424,7 @@ function App() {
               >
                 <option value="gemini">Gemini</option>
                 <option value="openai">OpenAI</option>
+                <option value="grok">Grok</option>
               </select>
             </label>
             <label>

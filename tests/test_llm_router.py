@@ -5,7 +5,7 @@ import pytest
 from packages.llm.router import UnsupportedProviderError, get_provider
 
 
-@pytest.mark.parametrize("provider_name", ["gemini", "openai"])
+@pytest.mark.parametrize("provider_name", ["gemini", "openai", "grok"])
 def test_get_provider_returns_provider_with_unified_response(provider_name: str) -> None:
     provider = get_provider(provider_name)
 
@@ -51,4 +51,16 @@ def test_get_provider_real_mode_requires_api_key(monkeypatch: pytest.MonkeyPatch
     provider = get_provider("openai")
 
     with pytest.raises(RuntimeError, match="OPENAI_API_KEY"):
+        provider.generate("hello")
+
+
+def test_get_provider_real_mode_requires_grok_api_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LLM_PROVIDER_MODE", "real")
+    monkeypatch.delenv("GROK_API_KEY", raising=False)
+
+    provider = get_provider("grok")
+
+    with pytest.raises(RuntimeError, match="GROK_API_KEY"):
         provider.generate("hello")

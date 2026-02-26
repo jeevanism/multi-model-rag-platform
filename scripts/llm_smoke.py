@@ -9,7 +9,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Local LLM provider smoke test (stub or real, depending on LLM_PROVIDER_MODE)."
     )
-    parser.add_argument("--provider", choices=["gemini", "openai"], required=True)
+    parser.add_argument("--provider", choices=["gemini", "openai", "grok"], required=True)
     parser.add_argument("--prompt", required=True)
     parser.add_argument("--model", default=None)
     return parser.parse_args()
