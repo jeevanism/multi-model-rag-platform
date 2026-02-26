@@ -10,7 +10,6 @@ Production-oriented RAG application built end-to-end with:
 - Firebase Hosting frontend
 
 ## Live Demo
-- Frontend (Firebase): `https://multi-model-rag-5713b.web.app`
 - Backend API (Cloud Run): `https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app`
 - API docs (Swagger): `https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app/docs`
 - Demo Video : https://youtu.be/iM-_bXSPgOQ
