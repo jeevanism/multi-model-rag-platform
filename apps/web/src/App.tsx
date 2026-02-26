@@ -83,6 +83,26 @@ type EvalRunDetail = {
   cases: EvalRunCaseItem[];
 };
 
+const MODEL_PRESETS: Record<Provider, string[]> = {
+  gemini: [
+    "gemini-3.1-pro-preview",
+    "gemini-3-pro-preview",
+    "gemini-3-flash-preview",
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+  ],
+  openai: ["gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini"],
+  grok: [
+    "grok-4-fast-non-reasoning",
+    "grok-4-fast-reasoning",
+    "grok-4-1-fast-non-reasoning",
+    "grok-4-1-fast-reasoning",
+    "grok-code-fast-1",
+    "grok-3-mini",
+  ],
+};
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
@@ -134,6 +154,11 @@ function App() {
     if (provider === "grok") return "grok-3-mini";
     return "gpt-4.1-mini";
   }, [provider]);
+
+  const selectedPresetValue = useMemo(() => {
+    if (!model.trim()) return "";
+    return MODEL_PRESETS[provider].includes(model.trim()) ? model.trim() : "__custom__";
+  }, [model, provider]);
 
   async function loadEvalRuns() {
     setEvalsLoading(true);
@@ -425,6 +450,25 @@ function App() {
                 <option value="gemini">Gemini</option>
                 <option value="openai">OpenAI</option>
                 <option value="grok">Grok</option>
+              </select>
+            </label>
+            <label>
+              <span>Model Preset</span>
+              <select
+                value={selectedPresetValue}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  if (next === "__custom__") return;
+                  setModel(next);
+                }}
+              >
+                <option value="">Default ({providerPlaceholder})</option>
+                {MODEL_PRESETS[provider].map((presetModel) => (
+                  <option key={presetModel} value={presetModel}>
+                    {presetModel}
+                  </option>
+                ))}
+                <option value="__custom__">Custom (use field below)</option>
               </select>
             </label>
             <label>
