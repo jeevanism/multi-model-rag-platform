@@ -29,6 +29,9 @@ class Settings:
             ],
         )
     )
+    demo_real_mode_password: str = os.getenv("DEMO_REAL_MODE_PASSWORD", "")
+    demo_unlock_cookie_secret: str = os.getenv("DEMO_UNLOCK_COOKIE_SECRET", "")
+    demo_unlock_cookie_name: str = os.getenv("DEMO_UNLOCK_COOKIE_NAME", "mmrag_demo_unlock")
 
 
 settings = Settings()

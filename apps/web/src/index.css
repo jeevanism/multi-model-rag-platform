@@ -1,20 +1,20 @@
 :root {
-  --bg-0: #0c0b13;
-  --bg-1: #13121d;
-  --bg-2: #1a1828;
-  --panel: rgb(18 17 28 / 82%);
-  --panel-strong: rgb(23 22 36 / 88%);
-  --border: rgb(255 255 255 / 10%);
-  --border-strong: rgb(255 255 255 / 16%);
-  --text-0: #f4f1ff;
-  --text-1: rgb(244 241 255 / 78%);
-  --text-2: rgb(244 241 255 / 58%);
-  --accent: #b388ff;
-  --accent-2: #7cf6d5;
-  --accent-3: #6ea6ff;
-  --success: #61e8a8;
-  --warn: #ffd07a;
-  --danger: #ff9ca8;
+  --bg-0: #1b1710;
+  --bg-1: #231d14;
+  --bg-2: #2d2418;
+  --panel: rgb(33 27 19 / 84%);
+  --panel-strong: rgb(40 32 22 / 90%);
+  --border: rgb(255 236 194 / 10%);
+  --border-strong: rgb(255 236 194 / 18%);
+  --text-0: #f7efd6;
+  --text-1: rgb(247 239 214 / 80%);
+  --text-2: rgb(247 239 214 / 58%);
+  --accent: #f5c86c;
+  --accent-2: #d4c483;
+  --accent-3: #f0ab52;
+  --success: #9ed38e;
+  --warn: #f2cf7f;
+  --danger: #f2a88f;
   font-family:
     'IBM Plex Sans',
     system-ui,
@@ -26,10 +26,10 @@
   font-weight: 400;
   color: var(--text-0);
   background:
-    radial-gradient(circle at 10% 10%, rgb(179 136 255 / 22%), transparent 42%),
-    radial-gradient(circle at 90% 15%, rgb(124 246 213 / 16%), transparent 45%),
-    radial-gradient(circle at 75% 80%, rgb(110 166 255 / 18%), transparent 42%),
-    linear-gradient(180deg, #0d0c16, #09080f 70%);
+    radial-gradient(circle at 10% 10%, rgb(245 200 108 / 18%), transparent 42%),
+    radial-gradient(circle at 90% 15%, rgb(212 196 131 / 14%), transparent 45%),
+    radial-gradient(circle at 75% 80%, rgb(240 171 82 / 15%), transparent 42%),
+    linear-gradient(180deg, #18130d, #120f0b 70%);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -119,9 +119,9 @@ textarea {
 
 .tab.active {
   background:
-    linear-gradient(135deg, rgb(179 136 255 / 16%), rgb(110 166 255 / 10%), rgb(124 246 213 / 8%)),
+    linear-gradient(135deg, rgb(245 200 108 / 16%), rgb(240 171 82 / 10%), rgb(212 196 131 / 8%)),
     rgb(255 255 255 / 3%);
-  border-color: rgb(179 136 255 / 24%);
+  border-color: rgb(245 200 108 / 24%);
   color: var(--text-0);
 }
 
@@ -163,8 +163,8 @@ input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: rgb(179 136 255 / 55%);
-  box-shadow: 0 0 0 3px rgb(179 136 255 / 16%);
+  border-color: rgb(245 200 108 / 55%);
+  box-shadow: 0 0 0 3px rgb(245 200 108 / 16%);
 }
 
 select {
@@ -215,16 +215,46 @@ input:disabled {
 .toggle input {
   width: auto;
   margin: 0;
-  accent-color: #b388ff;
+  accent-color: #f5c86c;
+}
+
+.auth-status-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.75rem;
+  background: linear-gradient(180deg, rgb(255 255 255 / 3%), rgb(255 255 255 / 1%));
+}
+
+.auth-status-card > div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.auth-status-label {
+  font-size: 0.75rem;
+  color: var(--text-2);
+}
+
+.auth-status {
+  color: var(--warn);
+  font-size: 0.88rem;
+}
+
+.auth-status.unlocked {
+  color: var(--success);
 }
 
 .request-id-box {
   border-radius: 12px;
-  border: 1px dashed rgb(179 136 255 / 28%);
+  border: 1px dashed rgb(245 200 108 / 28%);
   padding: 0.75rem;
   display: grid;
   gap: 0.25rem;
-  background: rgb(179 136 255 / 5%);
+  background: rgb(245 200 108 / 5%);
 }
 
 .request-id-box span {
@@ -262,14 +292,14 @@ input:disabled {
 }
 
 .run-item:hover {
-  border-color: rgb(179 136 255 / 30%);
+  border-color: rgb(245 200 108 / 30%);
   background: rgb(255 255 255 / 4%);
 }
 
 .run-item.active {
-  border-color: rgb(179 136 255 / 42%);
+  border-color: rgb(245 200 108 / 42%);
   background:
-    linear-gradient(135deg, rgb(179 136 255 / 12%), rgb(124 246 213 / 5%) 70%, transparent),
+    linear-gradient(135deg, rgb(245 200 108 / 12%), rgb(212 196 131 / 5%) 70%, transparent),
     rgb(255 255 255 / 4%);
 }
 
@@ -308,7 +338,7 @@ input:disabled {
   border-radius: 20px;
   padding: 1rem 1.1rem;
   background:
-    linear-gradient(120deg, rgb(179 136 255 / 8%), rgb(124 246 213 / 5%) 55%, transparent),
+    linear-gradient(120deg, rgb(245 200 108 / 9%), rgb(212 196 131 / 5%) 55%, transparent),
     var(--panel);
   display: flex;
   justify-content: space-between;
@@ -349,9 +379,9 @@ input:disabled {
 .ghost-button:hover,
 .composer button:hover {
   background:
-    linear-gradient(180deg, rgb(179 136 255 / 14%), rgb(124 246 213 / 7%)),
+    linear-gradient(180deg, rgb(245 200 108 / 14%), rgb(212 196 131 / 7%)),
     rgb(255 255 255 / 6%);
-  border-color: rgb(179 136 255 / 40%);
+  border-color: rgb(245 200 108 / 40%);
   transform: translateY(-1px);
 }
 
@@ -490,17 +520,17 @@ input:disabled {
 }
 
 .message-card.user {
-  border-color: rgb(124 246 213 / 24%);
+  border-color: rgb(212 196 131 / 24%);
   background:
-    linear-gradient(135deg, rgb(124 246 213 / 8%), transparent 60%),
-    rgb(20 44 41 / 22%);
+    linear-gradient(135deg, rgb(212 196 131 / 8%), transparent 60%),
+    rgb(56 49 31 / 18%);
 }
 
 .message-card.assistant {
-  border-color: rgb(179 136 255 / 26%);
+  border-color: rgb(245 200 108 / 26%);
   background:
-    linear-gradient(135deg, rgb(179 136 255 / 10%), rgb(110 166 255 / 6%) 60%, transparent),
-    rgb(31 25 47 / 22%);
+    linear-gradient(135deg, rgb(245 200 108 / 10%), rgb(240 171 82 / 6%) 60%, transparent),
+    rgb(58 43 22 / 20%);
 }
 
 .message-meta {
@@ -622,15 +652,54 @@ input:disabled {
   margin: 0;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(6 6 12 / 66%);
+  backdrop-filter: blur(6px);
+  z-index: 999;
+}
+
+.modal-card {
+  width: min(460px, 100%);
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  padding: 1rem;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 4%), rgb(255 255 255 / 2%)),
+    var(--panel-strong);
+  box-shadow: 0 20px 45px rgb(0 0 0 / 36%);
+  display: grid;
+  gap: 0.8rem;
+}
+
+.modal-card h3 {
+  margin: 0;
+}
+
+.modal-card label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
 .composer button {
   background:
-    linear-gradient(135deg, rgb(179 136 255 / 22%), rgb(110 166 255 / 15%) 48%, rgb(124 246 213 / 12%)),
+    linear-gradient(135deg, rgb(245 200 108 / 22%), rgb(240 171 82 / 15%) 48%, rgb(212 196 131 / 12%)),
     rgb(255 255 255 / 5%);
-  border-color: rgb(179 136 255 / 35%);
+  border-color: rgb(245 200 108 / 35%);
 }
 
 .composer button:hover {
-  border-color: rgb(179 136 255 / 55%);
+  border-color: rgb(245 200 108 / 55%);
 }
 
 .sr-only {

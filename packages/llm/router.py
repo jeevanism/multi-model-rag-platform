@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextvars import ContextVar
 import os
+from collections.abc import Iterator
 
 from packages.llm.base import LLMProvider
 from packages.llm.providers.gemini import GeminiProvider
@@ -12,8 +15,23 @@ class UnsupportedProviderError(ValueError):
     pass
 
 
+_PROVIDER_MODE_OVERRIDE: ContextVar[str | None] = ContextVar("llm_provider_mode_override", default=None)
+
+
 def _provider_mode() -> str:
+    override = _PROVIDER_MODE_OVERRIDE.get()
+    if override is not None:
+        return override
     return os.getenv("LLM_PROVIDER_MODE", "stub").strip().lower()
+
+
+@contextmanager
+def override_provider_mode(mode: str | None) -> Iterator[None]:
+    token = _PROVIDER_MODE_OVERRIDE.set(mode.strip().lower() if mode else None)
+    try:
+        yield
+    finally:
+        _PROVIDER_MODE_OVERRIDE.reset(token)
 
 
 def get_provider(provider: str, model: str | None = None) -> LLMProvider:

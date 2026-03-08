@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import os
+from contextlib import contextmanager
+from contextvars import ContextVar
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -9,6 +12,7 @@ from typing import Any
 EMBEDDING_DIM = 8
 STUB_EMBEDDING_PROVIDER = "stub"
 STUB_EMBEDDING_MODEL = "stub-embedding-v1"
+_EMBEDDING_MODE_OVERRIDE: ContextVar[str | None] = ContextVar("embedding_mode_override", default=None)
 
 
 @dataclass(frozen=True)
@@ -20,7 +24,19 @@ class EmbeddingResult:
 
 
 def _embedding_mode() -> str:
+    override = _EMBEDDING_MODE_OVERRIDE.get()
+    if override is not None:
+        return override
     return os.getenv("EMBEDDING_PROVIDER_MODE", "stub").strip().lower()
+
+
+@contextmanager
+def override_embedding_mode(mode: str | None) -> Iterator[None]:
+    token = _EMBEDDING_MODE_OVERRIDE.set(mode.strip().lower() if mode else None)
+    try:
+        yield
+    finally:
+        _EMBEDDING_MODE_OVERRIDE.reset(token)
 
 
 def _embedding_provider_name() -> str:

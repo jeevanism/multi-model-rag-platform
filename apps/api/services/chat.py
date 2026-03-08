@@ -7,9 +7,10 @@ from typing import Mapping
 from apps.api.schemas.chat import ChatRequest, ChatResponse, RetrievedChunkPreview
 from sqlalchemy.orm import Session
 
-from packages.llm.router import get_provider
+from packages.llm.router import get_provider, override_provider_mode
 from packages.llm.types import LLMResponse
 from packages.rag.citations import format_citations
+from packages.rag.embeddings import override_embedding_mode
 from packages.rag.prompting import build_grounded_prompt
 from packages.rag.retrieval import retrieve_chunks
 from packages.observability.tracing import trace_span
@@ -64,10 +65,15 @@ def generate_chat_response(request: ChatRequest, db: Session | None = None) -> C
         )
 
 
-def stream_chat_events(request: ChatRequest) -> Iterator[str]:
+def stream_chat_events(request: ChatRequest, force_stub: bool = False) -> Iterator[str]:
     with trace_span("chat.stream.generate", provider=request.provider):
-        provider = get_provider(request.provider, model=request.model)
-        result = provider.generate(request.message)
+        if force_stub:
+            with override_provider_mode("stub"), override_embedding_mode("stub"):
+                provider = get_provider(request.provider, model=request.model)
+                result = provider.generate(request.message)
+        else:
+            provider = get_provider(request.provider, model=request.model)
+            result = provider.generate(request.message)
     return _event_iterator(result)
 
 
