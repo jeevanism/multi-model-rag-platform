@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"multi-model-rag-platform/internal/config"
@@ -88,5 +89,79 @@ func TestOptionsPreflightReturnsNoContent(t *testing.T) {
 	}
 	if got := res.Header().Get("Access-Control-Allow-Origin"); got != "http://localhost:5173" {
 		t.Fatalf("expected allow origin header, got %q", got)
+	}
+}
+
+func TestDemoStatusReportsLockedByDefault(t *testing.T) {
+	server := NewServer(config.Load())
+	req := httptest.NewRequest(http.MethodGet, "/auth/demo-status", nil)
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", res.Code)
+	}
+
+	var body DemoUnlockStatusResponse
+	if err := json.Unmarshal(res.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if body.Unlocked {
+		t.Fatal("expected unlocked false")
+	}
+}
+
+func TestDemoUnlockReturnsUnauthorizedForInvalidPassword(t *testing.T) {
+	server := NewServer(config.Config{
+		DemoRealModePassword: "secret",
+		DemoUnlockCookieName: "mmrag_demo_unlock",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/auth/demo-unlock", strings.NewReader(`{"password":"wrong"}`))
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status 401, got %d", res.Code)
+	}
+}
+
+func TestDemoUnlockSetsCookieOnSuccess(t *testing.T) {
+	server := NewServer(config.Config{
+		DemoRealModePassword: "secret",
+		DemoUnlockCookieName: "mmrag_demo_unlock",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/auth/demo-unlock", strings.NewReader(`{"password":"secret"}`))
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", res.Code)
+	}
+	if got := res.Header().Get("Set-Cookie"); got == "" {
+		t.Fatal("expected unlock cookie to be set")
+	}
+}
+
+func TestDemoLockClearsCookie(t *testing.T) {
+	server := NewServer(config.Config{
+		DemoRealModePassword: "secret",
+		DemoUnlockCookieName: "mmrag_demo_unlock",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/auth/demo-lock", nil)
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", res.Code)
+	}
+	if got := res.Header().Get("Set-Cookie"); !strings.Contains(got, "Max-Age=0") && !strings.Contains(got, "Max-Age=-1") {
+		t.Fatalf("expected clearing cookie, got %q", got)
 	}
 }
