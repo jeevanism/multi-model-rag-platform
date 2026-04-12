@@ -15,7 +15,9 @@ class UnsupportedProviderError(ValueError):
     pass
 
 
-_PROVIDER_MODE_OVERRIDE: ContextVar[str | None] = ContextVar("llm_provider_mode_override", default=None)
+_PROVIDER_MODE_OVERRIDE: ContextVar[str | None] = ContextVar(
+    "llm_provider_mode_override", default=None
+)
 
 
 def _provider_mode() -> str:

@@ -14,11 +14,17 @@
 - [ ] Behavior verified manually where applicable
 - [ ] Added or updated tests for changed behavior
 
-## Quality Gates (from `README.md`)
+## Quality Gates
+
+### Python
 - [ ] `uv run ruff check .`
 - [ ] `uv run ruff format --check .` (or formatted with `uv run ruff format .`)
-- [ ] `uv run mypy apps/api tests`
+- [ ] `uv run mypy apps/api tests packages scripts`
 - [ ] `uv run pytest -q`
+
+### Go
+- [ ] `gofmt -w cmd internal` or verified formatting clean
+- [ ] `go test ./cmd/... ./internal/...`
 
 ## Database / API Impact
 - [ ] No schema changes

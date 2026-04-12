@@ -12,7 +12,9 @@ from typing import Any
 EMBEDDING_DIM = 8
 STUB_EMBEDDING_PROVIDER = "stub"
 STUB_EMBEDDING_MODEL = "stub-embedding-v1"
-_EMBEDDING_MODE_OVERRIDE: ContextVar[str | None] = ContextVar("embedding_mode_override", default=None)
+_EMBEDDING_MODE_OVERRIDE: ContextVar[str | None] = ContextVar(
+    "embedding_mode_override", default=None
+)
 
 
 @dataclass(frozen=True)
