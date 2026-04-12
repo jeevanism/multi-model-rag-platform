@@ -2,10 +2,13 @@ package httpapi
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"multi-model-rag-platform/internal/auth"
+	"multi-model-rag-platform/internal/llm"
 	"multi-model-rag-platform/internal/observability"
+	"multi-model-rag-platform/internal/service"
 )
 
 type rootResponse struct {
@@ -73,6 +76,51 @@ func handleDemoLock(demoService auth.DemoService) http.HandlerFunc {
 		writeJSON(w, http.StatusOK, DemoUnlockStatusResponse{
 			Unlocked:      false,
 			UnlockEnabled: demoService.UnlockEnabled(),
+		})
+	}
+}
+
+func handleChat(
+	demoService auth.DemoService,
+	chatService service.ChatService,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		req, err := decodeChatRequest(r.Body)
+		if err != nil {
+			writeValidationError(w, err)
+			return
+		}
+
+		result, err := chatService.GenerateChatResponse(service.ChatParams{
+			Message:  req.Message,
+			Provider: req.Provider,
+			Model:    req.Model,
+			RAG:      req.RAG,
+		}, !demoService.IsUnlocked(r))
+		if err != nil {
+			var unsupported llm.UnsupportedProviderError
+			switch {
+			case errors.As(err, &unsupported):
+				writeError(w, http.StatusBadRequest, err.Error())
+			case errors.Is(err, service.ErrRAGNotImplemented):
+				writeError(w, http.StatusBadRequest, err.Error())
+			default:
+				writeError(w, http.StatusInternalServerError, "Internal server error")
+			}
+			return
+		}
+
+		writeJSON(w, http.StatusOK, ChatResponse{
+			Answer:          result.Answer,
+			Provider:        result.Provider,
+			Model:           result.Model,
+			LatencyMS:       result.LatencyMS,
+			TokensIn:        result.TokensIn,
+			TokensOut:       result.TokensOut,
+			CostUSD:         result.CostUSD,
+			Citations:       []string{},
+			RAGUsed:         false,
+			RetrievedChunks: nil,
 		})
 	}
 }

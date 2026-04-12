@@ -10,6 +10,7 @@ type Config struct {
 	LogLevel               string
 	EnableTracing          bool
 	CORSAllowOrigins       []string
+	LLMProviderMode        string
 	DemoRealModePassword   string
 	DemoUnlockCookieSecret string
 	DemoUnlockCookieName   string
@@ -21,6 +22,7 @@ func Load() Config {
 		LogLevel:               envOrDefault("LOG_LEVEL", "info"),
 		EnableTracing:          strings.EqualFold(envOrDefault("ENABLE_TRACING", "true"), "true"),
 		CORSAllowOrigins:       parseCSVEnv("CORS_ALLOW_ORIGINS", []string{"http://localhost:5173", "http://127.0.0.1:5173"}),
+		LLMProviderMode:        strings.ToLower(envOrDefault("LLM_PROVIDER_MODE", "stub")),
 		DemoRealModePassword:   envOrDefault("DEMO_REAL_MODE_PASSWORD", ""),
 		DemoUnlockCookieSecret: envOrDefault("DEMO_UNLOCK_COOKIE_SECRET", ""),
 		DemoUnlockCookieName:   envOrDefault("DEMO_UNLOCK_COOKIE_NAME", "mmrag_demo_unlock"),

@@ -165,3 +165,78 @@ func TestDemoLockClearsCookie(t *testing.T) {
 		t.Fatalf("expected clearing cookie, got %q", got)
 	}
 }
+
+func TestChatReturnsRequiredFieldsForStubProvider(t *testing.T) {
+	server := NewServer(config.Load())
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/chat",
+		strings.NewReader(`{"message":"hello","provider":"gemini"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", res.Code)
+	}
+
+	var body ChatResponse
+	if err := json.Unmarshal(res.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if body.Answer != "[stub:gemini] hello" {
+		t.Fatalf("unexpected answer %q", body.Answer)
+	}
+	if body.Provider != "gemini" {
+		t.Fatalf("expected provider gemini, got %q", body.Provider)
+	}
+	if body.Model != "gemini-2.5-flash" {
+		t.Fatalf("expected default model, got %q", body.Model)
+	}
+	if body.Citations == nil {
+		t.Fatal("expected citations slice to be present")
+	}
+	if body.RAGUsed {
+		t.Fatal("expected rag_used false")
+	}
+}
+
+func TestChatReturnsBadRequestForUnsupportedProvider(t *testing.T) {
+	server := NewServer(config.Load())
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/chat",
+		strings.NewReader(`{"message":"hello","provider":"anthropic"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", res.Code)
+	}
+	if !strings.Contains(res.Body.String(), "Unsupported provider") {
+		t.Fatalf("expected unsupported provider error, got %q", res.Body.String())
+	}
+}
+
+func TestChatValidatesMissingMessage(t *testing.T) {
+	server := NewServer(config.Load())
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/chat",
+		strings.NewReader(`{"provider":"gemini"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected status 422, got %d", res.Code)
+	}
+}
