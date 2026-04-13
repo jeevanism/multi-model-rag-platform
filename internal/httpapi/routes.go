@@ -12,12 +12,15 @@ func registerRoutes(
 	demoService auth.DemoService,
 	chatService service.ChatService,
 	ingestService service.IngestService,
+	evalService service.EvalService,
 ) {
 	mux.HandleFunc("GET /", handleRoot)
 	mux.HandleFunc("GET /health", handleHealth)
 	mux.HandleFunc("POST /chat", handleChat(demoService, chatService))
 	mux.HandleFunc("POST /chat/stream", handleChatStream(demoService, chatService))
 	mux.HandleFunc("POST /ingest/text", handleIngestText(demoService, ingestService))
+	mux.HandleFunc("GET /evals/runs", handleEvalRuns(evalService))
+	mux.HandleFunc("GET /evals/runs/{id}", handleEvalRunDetail(evalService))
 	mux.HandleFunc("GET /auth/demo-status", handleDemoStatus(demoService))
 	mux.HandleFunc("POST /auth/demo-unlock", handleDemoUnlock(demoService))
 	mux.HandleFunc("POST /auth/demo-lock", handleDemoLock(demoService))

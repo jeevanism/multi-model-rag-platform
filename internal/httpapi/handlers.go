@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"multi-model-rag-platform/internal/auth"
@@ -255,6 +256,82 @@ func handleIngestText(
 			EmbeddingCount:    result.EmbeddingCount,
 			EmbeddingProvider: result.EmbeddingProvider,
 			EmbeddingModel:    result.EmbeddingModel,
+		})
+	}
+}
+
+func handleEvalRuns(evalService service.EvalService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		runs, err := evalService.ListEvalRuns(20)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "Internal server error")
+			return
+		}
+
+		response := make([]EvalRunSummaryItem, 0, len(runs))
+		for _, run := range runs {
+			response = append(response, EvalRunSummaryItem{
+				ID:           run.ID,
+				DatasetName:  run.DatasetName,
+				Provider:     run.Provider,
+				Model:        run.Model,
+				TotalCases:   run.TotalCases,
+				PassedCases:  run.PassedCases,
+				AvgLatencyMS: run.AvgLatencyMS,
+				CreatedAt:    run.CreatedAt,
+			})
+		}
+		writeJSON(w, http.StatusOK, response)
+	}
+}
+
+func handleEvalRunDetail(evalService service.EvalService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idRaw := r.PathValue("id")
+		evalRunID, err := strconv.Atoi(idRaw)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "Invalid eval run id")
+			return
+		}
+
+		detail, err := evalService.GetEvalRunDetail(evalRunID)
+		if err != nil {
+			if errors.Is(err, service.ErrEvalRunNotFound) {
+				writeError(w, http.StatusNotFound, "Eval run not found")
+				return
+			}
+			writeError(w, http.StatusInternalServerError, "Internal server error")
+			return
+		}
+
+		cases := make([]EvalRunCaseItem, 0, len(detail.Cases))
+		for _, item := range detail.Cases {
+			cases = append(cases, EvalRunCaseItem{
+				ID:                 item.ID,
+				CaseID:             item.CaseID,
+				Question:           item.Question,
+				Passed:             item.Passed,
+				LatencyMS:          item.LatencyMS,
+				CorrectnessScore:   item.CorrectnessScore,
+				GroundednessScore:  item.GroundednessScore,
+				HallucinationScore: item.HallucinationScore,
+				Citations:          item.Citations,
+				Error:              item.Error,
+			})
+		}
+
+		writeJSON(w, http.StatusOK, EvalRunDetail{
+			Run: EvalRunSummaryItem{
+				ID:           detail.Run.ID,
+				DatasetName:  detail.Run.DatasetName,
+				Provider:     detail.Run.Provider,
+				Model:        detail.Run.Model,
+				TotalCases:   detail.Run.TotalCases,
+				PassedCases:  detail.Run.PassedCases,
+				AvgLatencyMS: detail.Run.AvgLatencyMS,
+				CreatedAt:    detail.Run.CreatedAt,
+			},
+			Cases: cases,
 		})
 	}
 }

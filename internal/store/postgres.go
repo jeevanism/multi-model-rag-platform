@@ -10,6 +10,7 @@ import (
 
 	"multi-model-rag-platform/internal/config"
 	"multi-model-rag-platform/internal/rag"
+	"multi-model-rag-platform/internal/service"
 )
 
 type PostgresStore struct {
@@ -181,4 +182,136 @@ func (s *PostgresStore) RetrieveChunks(
 		results = append(results, item)
 	}
 	return results, rows.Err()
+}
+
+func (s *PostgresStore) ListEvalRuns(limit int) ([]service.EvalRunSummary, error) {
+	rows, err := s.db.Query(
+		`
+		SELECT
+			id,
+			dataset_name,
+			provider,
+			model,
+			total_cases,
+			passed_cases,
+			avg_latency_ms,
+			created_at
+		FROM eval_run
+		ORDER BY id DESC
+		LIMIT $1
+		`,
+		limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make([]service.EvalRunSummary, 0)
+	for rows.Next() {
+		var item service.EvalRunSummary
+		if err := rows.Scan(
+			&item.ID,
+			&item.DatasetName,
+			&item.Provider,
+			&item.Model,
+			&item.TotalCases,
+			&item.PassedCases,
+			&item.AvgLatencyMS,
+			&item.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		results = append(results, item)
+	}
+	return results, rows.Err()
+}
+
+func (s *PostgresStore) GetEvalRunDetail(evalRunID int) (service.EvalRunDetailResult, bool, error) {
+	var run service.EvalRunSummary
+	err := s.db.QueryRow(
+		`
+		SELECT
+			id,
+			dataset_name,
+			provider,
+			model,
+			total_cases,
+			passed_cases,
+			avg_latency_ms,
+			created_at
+		FROM eval_run
+		WHERE id = $1
+		`,
+		evalRunID,
+	).Scan(
+		&run.ID,
+		&run.DatasetName,
+		&run.Provider,
+		&run.Model,
+		&run.TotalCases,
+		&run.PassedCases,
+		&run.AvgLatencyMS,
+		&run.CreatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return service.EvalRunDetailResult{}, false, nil
+	}
+	if err != nil {
+		return service.EvalRunDetailResult{}, false, err
+	}
+
+	rows, err := s.db.Query(
+		`
+		SELECT
+			id,
+			case_id,
+			question,
+			passed,
+			latency_ms,
+			correctness_score,
+			groundedness_score,
+			hallucination_score,
+			citations,
+			error
+		FROM eval_run_case
+		WHERE eval_run_id = $1
+		ORDER BY id ASC
+		`,
+		evalRunID,
+	)
+	if err != nil {
+		return service.EvalRunDetailResult{}, false, err
+	}
+	defer rows.Close()
+
+	cases := make([]service.EvalRunCase, 0)
+	for rows.Next() {
+		var item service.EvalRunCase
+		var citations []string
+		if err := rows.Scan(
+			&item.ID,
+			&item.CaseID,
+			&item.Question,
+			&item.Passed,
+			&item.LatencyMS,
+			&item.CorrectnessScore,
+			&item.GroundednessScore,
+			&item.HallucinationScore,
+			&citations,
+			&item.Error,
+		); err != nil {
+			return service.EvalRunDetailResult{}, false, err
+		}
+		item.Citations = citations
+		cases = append(cases, item)
+	}
+	if err := rows.Err(); err != nil {
+		return service.EvalRunDetailResult{}, false, err
+	}
+
+	return service.EvalRunDetailResult{
+		Run:   run,
+		Cases: cases,
+	}, true, nil
 }

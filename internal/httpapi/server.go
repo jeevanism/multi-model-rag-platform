@@ -21,6 +21,7 @@ func NewServer(cfg config.Config) http.Handler {
 		auth.NewDemoService(cfg),
 		service.NewChatService(llm.NewRouter(cfg), postgresStore),
 		service.NewIngestService(postgresStore),
+		service.NewEvalService(postgresStore),
 	)
 }
 
@@ -29,6 +30,7 @@ func newServerWithDependencies(
 	demoService auth.DemoService,
 	chatService service.ChatService,
 	ingestService service.IngestService,
+	evalService service.EvalService,
 ) http.Handler {
 	mux := http.NewServeMux()
 	registerRoutes(
@@ -36,6 +38,7 @@ func newServerWithDependencies(
 		demoService,
 		chatService,
 		ingestService,
+		evalService,
 	)
 
 	handler := middleware.CORS(cfg.CORSAllowOrigins, mux)

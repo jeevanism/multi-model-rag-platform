@@ -269,6 +269,7 @@ func TestChatRAGReturnsCitationsAndDebugChunks(t *testing.T) {
 			},
 		}),
 		service.NewIngestService(nil),
+		service.NewEvalService(fakeHTTPEvalRepo{}),
 	)
 	req := httptest.NewRequest(
 		http.MethodPost,
@@ -364,6 +365,81 @@ type fakeHTTPChatRepo struct {
 
 func (f fakeHTTPChatRepo) RetrieveChunks(query string, topK int) ([]rag.RetrievedChunk, error) {
 	return f.chunks, nil
+}
+
+func TestEvalRunsEndpointReturnsList(t *testing.T) {
+	cfg := config.Config{
+		DatabaseURL: "postgresql://postgres:postgres@localhost:5432/multimodel_rag",
+	}
+	server := newServerWithDependencies(
+		cfg,
+		auth.NewDemoService(cfg),
+		service.NewChatService(llm.NewRouter(cfg), fakeHTTPChatRepo{}),
+		service.NewIngestService(nil),
+		service.NewEvalService(fakeHTTPEvalRepo{
+			runs: []service.EvalRunSummary{
+				{
+					ID:           1,
+					DatasetName:  "eval_set.jsonl",
+					Provider:     "gemini",
+					TotalCases:   3,
+					PassedCases:  3,
+					CreatedAt:    "2026-02-23T00:00:00+00:00",
+					AvgLatencyMS: float64Ptr(0),
+				},
+			},
+		}),
+	)
+	req := httptest.NewRequest(http.MethodGet, "/evals/runs", nil)
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", res.Code)
+	}
+	if !strings.Contains(res.Body.String(), `"id":1`) {
+		t.Fatalf("expected eval run in response, got %q", res.Body.String())
+	}
+}
+
+func TestEvalRunDetailEndpointReturnsNotFoundWhenMissing(t *testing.T) {
+	cfg := config.Config{
+		DatabaseURL: "postgresql://postgres:postgres@localhost:5432/multimodel_rag",
+	}
+	server := newServerWithDependencies(
+		cfg,
+		auth.NewDemoService(cfg),
+		service.NewChatService(llm.NewRouter(cfg), fakeHTTPChatRepo{}),
+		service.NewIngestService(nil),
+		service.NewEvalService(fakeHTTPEvalRepo{}),
+	)
+	req := httptest.NewRequest(http.MethodGet, "/evals/runs/999", nil)
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", res.Code)
+	}
+}
+
+type fakeHTTPEvalRepo struct {
+	runs   []service.EvalRunSummary
+	detail service.EvalRunDetailResult
+	found  bool
+}
+
+func (f fakeHTTPEvalRepo) ListEvalRuns(limit int) ([]service.EvalRunSummary, error) {
+	return f.runs, nil
+}
+
+func (f fakeHTTPEvalRepo) GetEvalRunDetail(evalRunID int) (service.EvalRunDetailResult, bool, error) {
+	return f.detail, f.found, nil
+}
+
+func float64Ptr(value float64) *float64 {
+	return &value
 }
 
 func TestIngestTextValidatesRequiredFields(t *testing.T) {
