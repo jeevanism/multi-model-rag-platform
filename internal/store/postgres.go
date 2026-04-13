@@ -67,3 +67,67 @@ func (s *PostgresStore) WithTx(
 
 	return tx.Commit()
 }
+
+func (s *PostgresStore) InsertDocument(
+	ctx context.Context,
+	tx *sql.Tx,
+	title string,
+	content string,
+) (int64, error) {
+	var documentID int64
+	err := tx.QueryRowContext(
+		ctx,
+		`
+		INSERT INTO documents (title, content)
+		VALUES ($1, $2)
+		RETURNING id
+		`,
+		title,
+		content,
+	).Scan(&documentID)
+	return documentID, err
+}
+
+func (s *PostgresStore) InsertChunk(
+	ctx context.Context,
+	tx *sql.Tx,
+	documentID int64,
+	chunkIndex int,
+	content string,
+) (int64, error) {
+	var chunkID int64
+	err := tx.QueryRowContext(
+		ctx,
+		`
+		INSERT INTO chunks (document_id, chunk_index, content)
+		VALUES ($1, $2, $3)
+		RETURNING id
+		`,
+		documentID,
+		chunkIndex,
+		content,
+	).Scan(&chunkID)
+	return chunkID, err
+}
+
+func (s *PostgresStore) InsertEmbedding(
+	ctx context.Context,
+	tx *sql.Tx,
+	chunkID int64,
+	vectorLiteral string,
+	provider string,
+	model string,
+) error {
+	_, err := tx.ExecContext(
+		ctx,
+		`
+		INSERT INTO embeddings (chunk_id, provider, model, embedding)
+		VALUES ($1, $2, $3, CAST($4 AS vector(8)))
+		`,
+		chunkID,
+		provider,
+		model,
+		vectorLiteral,
+	)
+	return err
+}

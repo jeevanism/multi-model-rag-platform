@@ -77,6 +77,7 @@ func TestHealthReturnsExpectedPayload(t *testing.T) {
 func TestOptionsPreflightReturnsNoContent(t *testing.T) {
 	server := NewServer(config.Config{
 		CORSAllowOrigins: []string{"http://localhost:5173"},
+		DatabaseURL:      "postgresql://postgres:postgres@localhost:5432/multimodel_rag",
 	})
 	req := httptest.NewRequest(http.MethodOptions, "/health", nil)
 	req.Header.Set("Origin", "http://localhost:5173")
@@ -117,6 +118,7 @@ func TestDemoUnlockReturnsUnauthorizedForInvalidPassword(t *testing.T) {
 	server := NewServer(config.Config{
 		DemoRealModePassword: "secret",
 		DemoUnlockCookieName: "mmrag_demo_unlock",
+		DatabaseURL:          "postgresql://postgres:postgres@localhost:5432/multimodel_rag",
 	})
 	req := httptest.NewRequest(http.MethodPost, "/auth/demo-unlock", strings.NewReader(`{"password":"wrong"}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -133,6 +135,7 @@ func TestDemoUnlockSetsCookieOnSuccess(t *testing.T) {
 	server := NewServer(config.Config{
 		DemoRealModePassword: "secret",
 		DemoUnlockCookieName: "mmrag_demo_unlock",
+		DatabaseURL:          "postgresql://postgres:postgres@localhost:5432/multimodel_rag",
 	})
 	req := httptest.NewRequest(http.MethodPost, "/auth/demo-unlock", strings.NewReader(`{"password":"secret"}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -152,6 +155,7 @@ func TestDemoLockClearsCookie(t *testing.T) {
 	server := NewServer(config.Config{
 		DemoRealModePassword: "secret",
 		DemoUnlockCookieName: "mmrag_demo_unlock",
+		DatabaseURL:          "postgresql://postgres:postgres@localhost:5432/multimodel_rag",
 	})
 	req := httptest.NewRequest(http.MethodPost, "/auth/demo-lock", nil)
 	res := httptest.NewRecorder()
@@ -294,5 +298,22 @@ func TestChatStreamReturnsBadRequestForUnsupportedProvider(t *testing.T) {
 
 	if res.Code != http.StatusBadRequest {
 		t.Fatalf("expected status 400, got %d", res.Code)
+	}
+}
+
+func TestIngestTextValidatesRequiredFields(t *testing.T) {
+	server := NewServer(config.Load())
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/ingest/text",
+		strings.NewReader(`{"title":"Doc"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected status 422, got %d", res.Code)
 	}
 }

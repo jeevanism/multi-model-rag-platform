@@ -200,6 +200,38 @@ func handleChatStream(
 	}
 }
 
+func handleIngestText(
+	demoService auth.DemoService,
+	ingestService service.IngestService,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		req, err := decodeIngestTextRequest(r.Body)
+		if err != nil {
+			writeValidationError(w, err)
+			return
+		}
+
+		result, err := ingestService.IngestText(r.Context(), service.IngestParams{
+			Title:        req.Title,
+			Content:      req.Content,
+			ChunkSize:    req.ChunkSize,
+			ChunkOverlap: req.ChunkOverlap,
+		}, !demoService.IsUnlocked(r))
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		writeJSON(w, http.StatusOK, IngestTextResponse{
+			DocumentID:        int(result.DocumentID),
+			ChunkCount:        result.ChunkCount,
+			EmbeddingCount:    result.EmbeddingCount,
+			EmbeddingProvider: result.EmbeddingProvider,
+			EmbeddingModel:    result.EmbeddingModel,
+		})
+	}
+}
+
 func writeJSON(w http.ResponseWriter, statusCode int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
