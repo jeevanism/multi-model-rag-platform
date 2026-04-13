@@ -9,6 +9,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"multi-model-rag-platform/internal/config"
+	"multi-model-rag-platform/internal/rag"
 )
 
 type PostgresStore struct {
@@ -130,4 +131,54 @@ func (s *PostgresStore) InsertEmbedding(
 		vectorLiteral,
 	)
 	return err
+}
+
+func (s *PostgresStore) RetrieveChunks(
+	query string,
+	topK int,
+) ([]rag.RetrievedChunk, error) {
+	embedding, err := rag.EmbedText(query, rag.EmbeddingDim)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := s.db.Query(
+		`
+		SELECT
+			d.id AS document_id,
+			c.id AS chunk_id,
+			c.chunk_index AS chunk_index,
+			d.title AS title,
+			c.content AS content,
+			(e.embedding <-> CAST($1 AS vector(8))) AS distance
+		FROM embeddings e
+		JOIN chunks c ON c.id = e.chunk_id
+		JOIN documents d ON d.id = c.document_id
+		ORDER BY e.embedding <-> CAST($1 AS vector(8)) ASC
+		LIMIT $2
+		`,
+		rag.ToPGVectorLiteral(embedding.Vector),
+		topK,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make([]rag.RetrievedChunk, 0)
+	for rows.Next() {
+		var item rag.RetrievedChunk
+		if err := rows.Scan(
+			&item.DocumentID,
+			&item.ChunkID,
+			&item.ChunkIndex,
+			&item.Title,
+			&item.Content,
+			&item.Score,
+		); err != nil {
+			return nil, err
+		}
+		results = append(results, item)
+	}
+	return results, rows.Err()
 }

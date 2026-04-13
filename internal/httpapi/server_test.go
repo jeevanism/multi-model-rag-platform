@@ -7,7 +7,11 @@ import (
 	"strings"
 	"testing"
 
+	"multi-model-rag-platform/internal/auth"
 	"multi-model-rag-platform/internal/config"
+	"multi-model-rag-platform/internal/llm"
+	"multi-model-rag-platform/internal/rag"
+	"multi-model-rag-platform/internal/service"
 )
 
 func TestRootReturnsExpectedPayload(t *testing.T) {
@@ -245,6 +249,59 @@ func TestChatValidatesMissingMessage(t *testing.T) {
 	}
 }
 
+func TestChatRAGReturnsCitationsAndDebugChunks(t *testing.T) {
+	cfg := config.Config{
+		DatabaseURL: "postgresql://postgres:postgres@localhost:5432/multimodel_rag",
+	}
+	server := newServerWithDependencies(
+		cfg,
+		auth.NewDemoService(cfg),
+		service.NewChatService(llm.NewRouter(cfg), fakeHTTPChatRepo{
+			chunks: []rag.RetrievedChunk{
+				{
+					DocumentID: 1,
+					ChunkID:    10,
+					ChunkIndex: 0,
+					Title:      "Test Doc",
+					Content:    "Important context.",
+					Score:      0.123,
+				},
+			},
+		}),
+		service.NewIngestService(nil),
+	)
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/chat",
+		strings.NewReader(`{"message":"what is in the doc?","provider":"gemini","rag":true,"top_k":2,"debug":true}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", res.Code)
+	}
+
+	var body ChatResponse
+	if err := json.Unmarshal(res.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if !body.RAGUsed {
+		t.Fatal("expected rag_used true")
+	}
+	if len(body.Citations) != 1 || body.Citations[0] != "[source:Test Doc#chunk=0]" {
+		t.Fatalf("unexpected citations %#v", body.Citations)
+	}
+	if len(body.RetrievedChunks) != 1 || body.RetrievedChunks[0].Title != "Test Doc" {
+		t.Fatalf("unexpected retrieved chunks %#v", body.RetrievedChunks)
+	}
+	if !strings.Contains(body.Answer, "[source:Test Doc#chunk=0]") {
+		t.Fatalf("expected citation in answer, got %q", body.Answer)
+	}
+}
+
 func TestChatStreamReturnsSSEEvents(t *testing.T) {
 	server := NewServer(config.Load())
 	req := httptest.NewRequest(
@@ -299,6 +356,14 @@ func TestChatStreamReturnsBadRequestForUnsupportedProvider(t *testing.T) {
 	if res.Code != http.StatusBadRequest {
 		t.Fatalf("expected status 400, got %d", res.Code)
 	}
+}
+
+type fakeHTTPChatRepo struct {
+	chunks []rag.RetrievedChunk
+}
+
+func (f fakeHTTPChatRepo) RetrieveChunks(query string, topK int) ([]rag.RetrievedChunk, error) {
+	return f.chunks, nil
 }
 
 func TestIngestTextValidatesRequiredFields(t *testing.T) {

@@ -10,6 +10,7 @@ import (
 	"multi-model-rag-platform/internal/auth"
 	"multi-model-rag-platform/internal/llm"
 	"multi-model-rag-platform/internal/observability"
+	"multi-model-rag-platform/internal/rag"
 	"multi-model-rag-platform/internal/service"
 	"multi-model-rag-platform/internal/sse"
 )
@@ -99,13 +100,15 @@ func handleChat(
 			Provider: req.Provider,
 			Model:    req.Model,
 			RAG:      req.RAG,
+			TopK:     req.TopK,
+			Debug:    req.Debug,
 		}, !demoService.IsUnlocked(r))
 		if err != nil {
 			var unsupported llm.UnsupportedProviderError
 			switch {
 			case errors.As(err, &unsupported):
 				writeError(w, http.StatusBadRequest, err.Error())
-			case errors.Is(err, service.ErrRAGNotImplemented):
+			case errors.Is(err, service.ErrRAGRepositoryRequired):
 				writeError(w, http.StatusBadRequest, err.Error())
 			default:
 				writeError(w, http.StatusInternalServerError, "Internal server error")
@@ -114,16 +117,16 @@ func handleChat(
 		}
 
 		writeJSON(w, http.StatusOK, ChatResponse{
-			Answer:          result.Answer,
-			Provider:        result.Provider,
-			Model:           result.Model,
-			LatencyMS:       result.LatencyMS,
-			TokensIn:        result.TokensIn,
-			TokensOut:       result.TokensOut,
-			CostUSD:         result.CostUSD,
-			Citations:       []string{},
-			RAGUsed:         false,
-			RetrievedChunks: nil,
+			Answer:          result.Response.Answer,
+			Provider:        result.Response.Provider,
+			Model:           result.Response.Model,
+			LatencyMS:       result.Response.LatencyMS,
+			TokensIn:        result.Response.TokensIn,
+			TokensOut:       result.Response.TokensOut,
+			CostUSD:         result.Response.CostUSD,
+			Citations:       result.Citations,
+			RAGUsed:         result.RAGUsed,
+			RetrievedChunks: toRetrievedChunkPreviews(result.RetrievedChunks, req.Debug),
 		})
 	}
 }
@@ -144,13 +147,15 @@ func handleChatStream(
 			Provider: req.Provider,
 			Model:    req.Model,
 			RAG:      req.RAG,
+			TopK:     req.TopK,
+			Debug:    req.Debug,
 		}, !demoService.IsUnlocked(r))
 		if err != nil {
 			var unsupported llm.UnsupportedProviderError
 			switch {
 			case errors.As(err, &unsupported):
 				writeError(w, http.StatusBadRequest, err.Error())
-			case errors.Is(err, service.ErrRAGNotImplemented):
+			case errors.Is(err, service.ErrRAGRepositoryRequired):
 				writeError(w, http.StatusBadRequest, err.Error())
 			default:
 				writeError(w, http.StatusInternalServerError, "Internal server error")
@@ -166,8 +171,8 @@ func handleChatStream(
 		flusher, _ := w.(http.Flusher)
 
 		if err := sse.WriteEvent(w, "start", map[string]string{
-			"provider": result.Provider,
-			"model":    result.Model,
+			"provider": result.Response.Provider,
+			"model":    result.Response.Model,
 		}); err != nil {
 			return
 		}
@@ -175,7 +180,7 @@ func handleChatStream(
 			flusher.Flush()
 		}
 
-		for _, token := range strings.Fields(result.Answer) {
+		for _, token := range strings.Fields(result.Response.Answer) {
 			if err := sse.WriteEvent(w, "token", map[string]string{"text": token}); err != nil {
 				return
 			}
@@ -185,11 +190,11 @@ func handleChatStream(
 		}
 
 		if err := sse.WriteEvent(w, "end", map[string]any{
-			"answer":     result.Answer,
-			"latency_ms": result.LatencyMS,
-			"tokens_in":  result.TokensIn,
-			"tokens_out": result.TokensOut,
-			"cost_usd":   result.CostUSD,
+			"answer":     result.Response.Answer,
+			"latency_ms": result.Response.LatencyMS,
+			"tokens_in":  result.Response.TokensIn,
+			"tokens_out": result.Response.TokensOut,
+			"cost_usd":   result.Response.CostUSD,
 		}); err != nil {
 			_, _ = fmt.Fprint(w, "")
 			return
@@ -198,6 +203,28 @@ func handleChatStream(
 			flusher.Flush()
 		}
 	}
+}
+
+func toRetrievedChunkPreviews(
+	chunks []rag.RetrievedChunk,
+	debug bool,
+) []RetrievedChunkPreview {
+	if !debug || len(chunks) == 0 {
+		return nil
+	}
+
+	previews := make([]RetrievedChunkPreview, 0, len(chunks))
+	for _, chunk := range chunks {
+		previews = append(previews, RetrievedChunkPreview{
+			DocumentID: chunk.DocumentID,
+			ChunkID:    chunk.ChunkID,
+			ChunkIndex: chunk.ChunkIndex,
+			Title:      chunk.Title,
+			Content:    chunk.Content,
+			Score:      chunk.Score,
+		})
+	}
+	return previews
 }
 
 func handleIngestText(

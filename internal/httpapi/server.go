@@ -16,12 +16,26 @@ func NewServer(cfg config.Config) http.Handler {
 	if err != nil {
 		panic(err)
 	}
+	return newServerWithDependencies(
+		cfg,
+		auth.NewDemoService(cfg),
+		service.NewChatService(llm.NewRouter(cfg), postgresStore),
+		service.NewIngestService(postgresStore),
+	)
+}
+
+func newServerWithDependencies(
+	cfg config.Config,
+	demoService auth.DemoService,
+	chatService service.ChatService,
+	ingestService service.IngestService,
+) http.Handler {
 	mux := http.NewServeMux()
 	registerRoutes(
 		mux,
-		auth.NewDemoService(cfg),
-		service.NewChatService(llm.NewRouter(cfg)),
-		service.NewIngestService(postgresStore),
+		demoService,
+		chatService,
+		ingestService,
 	)
 
 	handler := middleware.CORS(cfg.CORSAllowOrigins, mux)
