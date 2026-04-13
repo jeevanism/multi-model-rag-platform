@@ -3,12 +3,15 @@ package httpapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"multi-model-rag-platform/internal/auth"
 	"multi-model-rag-platform/internal/llm"
 	"multi-model-rag-platform/internal/observability"
 	"multi-model-rag-platform/internal/service"
+	"multi-model-rag-platform/internal/sse"
 )
 
 type rootResponse struct {
@@ -122,6 +125,78 @@ func handleChat(
 			RAGUsed:         false,
 			RetrievedChunks: nil,
 		})
+	}
+}
+
+func handleChatStream(
+	demoService auth.DemoService,
+	chatService service.ChatService,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		req, err := decodeChatRequest(r.Body)
+		if err != nil {
+			writeValidationError(w, err)
+			return
+		}
+
+		result, err := chatService.GenerateChatResponse(service.ChatParams{
+			Message:  req.Message,
+			Provider: req.Provider,
+			Model:    req.Model,
+			RAG:      req.RAG,
+		}, !demoService.IsUnlocked(r))
+		if err != nil {
+			var unsupported llm.UnsupportedProviderError
+			switch {
+			case errors.As(err, &unsupported):
+				writeError(w, http.StatusBadRequest, err.Error())
+			case errors.Is(err, service.ErrRAGNotImplemented):
+				writeError(w, http.StatusBadRequest, err.Error())
+			default:
+				writeError(w, http.StatusInternalServerError, "Internal server error")
+			}
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.WriteHeader(http.StatusOK)
+
+		flusher, _ := w.(http.Flusher)
+
+		if err := sse.WriteEvent(w, "start", map[string]string{
+			"provider": result.Provider,
+			"model":    result.Model,
+		}); err != nil {
+			return
+		}
+		if flusher != nil {
+			flusher.Flush()
+		}
+
+		for _, token := range strings.Fields(result.Answer) {
+			if err := sse.WriteEvent(w, "token", map[string]string{"text": token}); err != nil {
+				return
+			}
+			if flusher != nil {
+				flusher.Flush()
+			}
+		}
+
+		if err := sse.WriteEvent(w, "end", map[string]any{
+			"answer":     result.Answer,
+			"latency_ms": result.LatencyMS,
+			"tokens_in":  result.TokensIn,
+			"tokens_out": result.TokensOut,
+			"cost_usd":   result.CostUSD,
+		}); err != nil {
+			_, _ = fmt.Fprint(w, "")
+			return
+		}
+		if flusher != nil {
+			flusher.Flush()
+		}
 	}
 }
 

@@ -240,3 +240,59 @@ func TestChatValidatesMissingMessage(t *testing.T) {
 		t.Fatalf("expected status 422, got %d", res.Code)
 	}
 }
+
+func TestChatStreamReturnsSSEEvents(t *testing.T) {
+	server := NewServer(config.Load())
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/chat/stream",
+		strings.NewReader(`{"message":"hello world","provider":"gemini"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", res.Code)
+	}
+	if got := res.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/event-stream") {
+		t.Fatalf("expected text/event-stream content type, got %q", got)
+	}
+	body := res.Body.String()
+	if !strings.Contains(body, "event: start") {
+		t.Fatalf("expected start event, got %q", body)
+	}
+	if !strings.Contains(body, "event: token") {
+		t.Fatalf("expected token event, got %q", body)
+	}
+	if !strings.Contains(body, `"text":"[stub:gemini]"`) && !strings.Contains(body, `"text": "[stub:gemini]"`) {
+		t.Fatalf("expected first token payload, got %q", body)
+	}
+	if !strings.Contains(body, `"text":"hello"`) && !strings.Contains(body, `"text": "hello"`) {
+		t.Fatalf("expected hello token payload, got %q", body)
+	}
+	if !strings.Contains(body, `"text":"world"`) && !strings.Contains(body, `"text": "world"`) {
+		t.Fatalf("expected world token payload, got %q", body)
+	}
+	if !strings.Contains(body, "event: end") {
+		t.Fatalf("expected end event, got %q", body)
+	}
+}
+
+func TestChatStreamReturnsBadRequestForUnsupportedProvider(t *testing.T) {
+	server := NewServer(config.Load())
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/chat/stream",
+		strings.NewReader(`{"message":"hello","provider":"anthropic"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", res.Code)
+	}
+}

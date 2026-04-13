@@ -15,6 +15,7 @@ func registerRoutes(
 	mux.HandleFunc("GET /", handleRoot)
 	mux.HandleFunc("GET /health", handleHealth)
 	mux.HandleFunc("POST /chat", handleChat(demoService, chatService))
+	mux.HandleFunc("POST /chat/stream", handleChatStream(demoService, chatService))
 	mux.HandleFunc("GET /auth/demo-status", handleDemoStatus(demoService))
 	mux.HandleFunc("POST /auth/demo-unlock", handleDemoUnlock(demoService))
 	mux.HandleFunc("POST /auth/demo-lock", handleDemoLock(demoService))
