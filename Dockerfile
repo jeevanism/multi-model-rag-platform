@@ -1,33 +1,30 @@
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS builder
+FROM golang:1.26-bookworm AS builder
 
 WORKDIR /app
 
-# Copy dependency metadata first for better layer caching.
-COPY pyproject.toml uv.lock ./
+COPY go.mod go.sum ./
+RUN go mod download
 
-# Copy source packages required by the API package installation.
-COPY apps ./apps
-COPY packages ./packages
+COPY cmd ./cmd
+COPY internal ./internal
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/multi-model-rag-api ./cmd/api
 
-# Create a production virtualenv from the lockfile.
-RUN uv sync --frozen --no-dev
-
-FROM python:3.11-slim AS runtime
+FROM debian:bookworm-slim AS runtime
 
 WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PATH="/app/.venv/bin:${PATH}" \
-    PORT=8080
+ENV PORT=8080
 
-COPY --from=builder /app/.venv /app/.venv
-COPY apps ./apps
-COPY packages ./packages
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --system --create-home --home-dir /home/appuser appuser
+
+COPY --from=builder /out/multi-model-rag-api /app/multi-model-rag-api
 COPY migrations ./migrations
-COPY scripts ./scripts
+
+USER appuser
 
 EXPOSE 8080
 
-CMD ["uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8080"]
-
+CMD ["/app/multi-model-rag-api"]

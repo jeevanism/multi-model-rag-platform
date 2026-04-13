@@ -1,7 +1,7 @@
 # Multi-Model RAG Platform
 
 Production-oriented RAG application built end-to-end with:
-- FastAPI backend (`/chat`, `/chat/stream`, `/ingest/text`, eval APIs)
+- Go backend (`/chat`, `/chat/stream`, `/ingest/text`, eval APIs)
 - Postgres + `pgvector` retrieval
 - React UI (chat + eval dashboard)
 - Eval runner + scoring + regression gate
@@ -74,7 +74,8 @@ High-level flow:
 7. `packages/observability` emits structured request/span logs
 
 ### Main Components
-- `apps/api`: FastAPI backend
+- `cmd/api` + `internal/*`: Go backend
+- `apps/api`: legacy FastAPI reference implementation kept during migration
 - `apps/web`: React + Vite frontend
 - `packages/llm`: provider abstraction
 - `packages/rag`: ingestion/retrieval/citations
@@ -107,12 +108,18 @@ High-level flow:
 
 ### Backend
 ```bash
-uv venv --python 3.11
-source .venv/bin/activate
-uv pip install -e ".[dev]"
+go mod tidy
 
 make up
 make migrate
+go run ./cmd/api
+```
+
+Legacy Python backend reference:
+```bash
+uv venv --python 3.11
+source .venv/bin/activate
+uv pip install -e ".[dev]"
 uv run uvicorn apps.api.main:app --reload --port 8000
 ```
 
@@ -131,6 +138,7 @@ uv run ruff format .
 uv run ruff check .
 uv run mypy apps/api tests packages scripts
 uv run pytest -q
+GOCACHE=/tmp/go-build-cache go test ./cmd/... ./internal/...
 ```
 
 ## Cloud / Ops Runbooks

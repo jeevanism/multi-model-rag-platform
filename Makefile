@@ -1,8 +1,7 @@
-PYTHON ?= python3
-UVICORN ?= uvicorn
+GO ?= go
 PSQL ?= psql
 
-.PHONY: up down logs api test lint format typecheck ci-check migrate db-shell db-check eval-smoke eval-gate docker-build docker-run deploy-cloud-run
+.PHONY: up down logs api api-python test test-python test-go lint format typecheck ci-check migrate db-shell db-check eval-smoke eval-gate docker-build docker-run deploy-cloud-run
 
 up:
 	docker compose up -d
@@ -14,7 +13,10 @@ logs:
 	docker compose logs -f postgres
 
 api:
-	$(UVICORN) apps.api.main:app --reload --host 0.0.0.0 --port 8000
+	$(GO) run ./cmd/api
+
+api-python:
+	uv run uvicorn apps.api.main:app --reload --host 0.0.0.0 --port 8000
 
 migrate:
 	for f in migrations/*.sql; do \
@@ -29,18 +31,24 @@ db-check:
 	$(PSQL) "$${PSQL_DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/multimodel_rag}" -c "SELECT extname FROM pg_extension WHERE extname = 'vector';"
 
 test:
+	GOCACHE=/tmp/go-build-cache $(GO) test ./cmd/... ./internal/...
+
+test-python:
 	pytest -q
 
+test-go:
+	GOCACHE=/tmp/go-build-cache $(GO) test ./cmd/... ./internal/...
+
 lint:
-	ruff check .
+	uv run ruff check .
 
 format:
-	ruff format .
+	uv run ruff format .
 
 typecheck:
-	mypy apps/api tests
+	uv run mypy apps/api tests packages scripts
 
-ci-check: lint typecheck test
+ci-check: lint typecheck test-python test-go
 
 eval-smoke:
 	uv run python scripts/eval_run.py --limit 3
