@@ -12,12 +12,12 @@ Production-oriented RAG application built end-to-end with:
 ## Live Demo
 - Frontend (Firebase): [https://multi-model-rag-5713b.web.app](https://multi-model-rag-5713b.web.app)
 - Backend API (Cloud Run): [https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app](https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app)
-- API docs (Swagger): [https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app/docs](https://multi-model-rag-api-ozzmnn5qja-uc.a.run.app/docs)
 - Demo Video : https://youtu.be/iM-_bXSPgOQ
 
 Note:
 - I pause Cloud SQL outside demo/testing windows to control billing on a personal GCP account.
 - If DB is paused, DB-backed features (`/ingest/text`, `/evals/*`, `rag=true`) will fail until Cloud SQL is resumed.
+- The local repository runtime is now Go-first. Hosted links may lag behind the latest local migration state until redeployed.
 
 ## Project Goal
 Build a production-grade, production-shaped RAG system that demonstrates:
@@ -29,11 +29,25 @@ Build a production-grade, production-shaped RAG system that demonstrates:
 
 ## What Is Working (Current State)
 
+### Migration Status
+- Core FastAPI-to-Go migration plan: `11/11` phases complete
+- Remaining work is hardening, parity review, real provider integrations, and final cleanup of the legacy Python backend
+
 ### Core Product
-- Chat API (`/chat`) and streaming chat (`/chat/stream` SSE)
-- Text ingestion (`/ingest/text`)
-- RAG retrieval via `pgvector`
+- Go backend endpoints:
+  - `GET /`
+  - `GET /health`
+  - `POST /chat`
+  - `POST /chat/stream`
+  - `POST /ingest/text`
+  - `GET /evals/runs`
+  - `GET /evals/runs/{id}`
+  - `GET /auth/demo-status`
+  - `POST /auth/demo-unlock`
+  - `POST /auth/demo-lock`
+- RAG ingestion and retrieval via Postgres + `pgvector`
 - Citation-grounded responses
+- Demo auth cookie flow
 - React UI with:
   - JSON + SSE chat modes
   - provider selection
@@ -51,27 +65,31 @@ Build a production-grade, production-shaped RAG system that demonstrates:
 - Regression gating against baseline
 - Eval persistence in DB (`eval_run`, `eval_run_case`)
 
-### Cloud Deployment
-- Backend deployed to Cloud Run
-- Cloud SQL Postgres attached to Cloud Run
-- Secret Manager for runtime secrets (`DATABASE_URL`, `GEMINI_API_KEY`)
-- Frontend deployed to Firebase Hosting
+### Runtime / Delivery
+- Go server runs from `cmd/api` with packages under `internal/*`
+- Dockerfile builds and runs the Go backend
+- Cloud SQL migrations remain SQL-first via `psql`
+- Frontend remains unchanged in `apps/web`
 
 ## Provider Status (Important)
-- `Gemini`: real generation + real embeddings enabled and validated in cloud ✅
-- `OpenAI`: adapter implemented, runtime validation pending (no OpenAI API key configured) ⏳
-- `Qwen` / `DeepSeek`: planned next (provider expansion roadmap) ⏳
+- Go backend currently implements deterministic stub behavior for:
+  - `gemini`
+  - `openai`
+  - `grok`
+- Default model names are wired for those providers, but real provider HTTP integrations in Go are still pending
+- Real Gemini/OpenAI/Grok execution is post-migration follow-up work, not part of the completed core replacement
 
 ## Architecture (Implemented)
 High-level flow:
 
-1. `apps/web` sends requests to `apps/api`
-2. `apps/api` handles API schemas + service orchestration
-3. `packages/llm` routes provider calls (Gemini/OpenAI abstraction)
-4. `packages/rag` handles chunking, embeddings, retrieval, grounding, citations
-5. `packages/evals` runs/persists evals and applies scoring/gates
-6. Postgres + `pgvector` stores documents/chunks/embeddings + eval history
-7. `packages/observability` emits structured request/span logs
+1. `apps/web` sends requests to the Go API
+2. `cmd/api` boots the server and loads env-based config
+3. `internal/httpapi` handles routes, decoding, validation, and HTTP responses
+4. `internal/service` orchestrates chat, ingest, and eval behavior
+5. `internal/llm` provides provider routing and stub responses
+6. `internal/rag` handles chunking, embeddings, grounding, citations, and prompt construction
+7. `internal/store` accesses Postgres + `pgvector` via `database/sql` and `github.com/jackc/pgx/v5/stdlib`
+8. `internal/observability` emits structured request and span logs
 
 ### Main Components
 - `cmd/api` + `internal/*`: Go backend
@@ -91,28 +109,31 @@ High-level flow:
 - Cloud operations/debugging workflows are documented and reproducible
 
 ## Tradeoffs / Current Limitations
-- OpenAI runtime path is implemented but not validated yet (no key available)
-- Additional providers (Qwen/DeepSeek) not integrated yet
+- Go backend real provider execution is not implemented yet; current Go behavior is stub-first
+- Exact FastAPI validation and edge-case parity still needs a final review pass
+- `apps/api` still exists as a legacy reference and has not been retired yet
 - CI is implemented; CD is still manual (deploy scripts + commands)
 - Tracing is currently log-based spans (not full OpenTelemetry exporter)
 
 ## Roadmap (Near-Term)
-1. Provider expansion: Qwen / DeepSeek / OpenAI runtime validation
-2. CI/CD automation:
+1. Real Gemini, OpenAI, and Grok provider integrations in Go
+2. Parity gap review against remaining FastAPI edge cases
+3. Cutover cleanup and eventual deprecation of `apps/api`
+4. CI/CD automation:
    - backend deploy to Cloud Run
    - frontend deploy to Firebase Hosting
-3. Real-mode baseline management (separate baselines per provider/model)
-4. Further RAG quality improvements (retrieval tuning/reranking)
+5. Real-mode baseline management (separate baselines per provider/model)
+6. Further RAG quality improvements (retrieval tuning/reranking)
 
 ## Local Quickstart
 
 ### Backend
 ```bash
-go mod tidy
+cp .env.example .env
 
 make up
 make migrate
-go run ./cmd/api
+make api
 ```
 
 Legacy Python backend reference:
@@ -132,13 +153,18 @@ npm run dev
 
 Open `http://localhost:5173`
 
+Default local ports:
+- Go API: `http://localhost:8080`
+- Vite frontend: `http://localhost:5173`
+
 ### Checks
 ```bash
-uv run ruff format .
 uv run ruff check .
+uv run ruff format --check .
 uv run mypy apps/api tests packages scripts
 uv run pytest -q
 GOCACHE=/tmp/go-build-cache go test ./cmd/... ./internal/...
+docker build -t multi-model-rag-api:local .
 ```
 
 ## Cloud / Ops Runbooks
