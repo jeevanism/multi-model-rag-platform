@@ -1,7 +1,10 @@
 # Multi-Model RAG Platform
 
-Production-oriented RAG application built end-to-end with:
+Production-oriented RAG application built as a showcase of how the same product can be implemented with both Go and Python/FastAPI backends while preserving shared frontend contracts, retrieval architecture, evaluation tooling, and deployment shape.
+
+Built end-to-end with:
 - Go backend (`/chat`, `/chat/stream`, `/ingest/text`, eval APIs)
+- Python/FastAPI backend for the same product surface
 - Postgres + `pgvector` retrieval
 - React UI (chat + eval dashboard)
 - Eval runner + scoring + regression gate
@@ -17,7 +20,7 @@ Production-oriented RAG application built end-to-end with:
 Note:
 - I pause Cloud SQL outside demo/testing windows to control billing on a personal GCP account.
 - If DB is paused, DB-backed features (`/ingest/text`, `/evals/*`, `rag=true`) will fail until Cloud SQL is resumed.
-- The local repository runtime is now Go-first. Hosted links may lag behind the latest local migration state until redeployed.
+- The local repository contains both backend implementations. Go is the current primary runtime path, and the FastAPI backend remains available for comparison, reference, and parity checks.
 
 ## Project Goal
 Build a production-grade, production-shaped RAG system that demonstrates:
@@ -31,7 +34,7 @@ Build a production-grade, production-shaped RAG system that demonstrates:
 
 ### Migration Status
 - Core FastAPI-to-Go migration plan: `11/11` phases complete
-- Remaining work is hardening, parity review, real provider integrations, and final cleanup of the legacy Python backend
+- Remaining work is hardening, parity review, real provider integrations, and deciding the long-term coexistence or cleanup path for the two backend implementations
 
 ### Core Product
 - Go backend endpoints:
@@ -67,6 +70,7 @@ Build a production-grade, production-shaped RAG system that demonstrates:
 
 ### Runtime / Delivery
 - Go server runs from `cmd/api` with packages under `internal/*`
+- FastAPI backend also exists under `apps/api`
 - Dockerfile builds and runs the Go backend
 - Cloud SQL migrations remain SQL-first via `psql`
 - Frontend remains unchanged in `apps/web`
@@ -93,7 +97,7 @@ High-level flow:
 
 ### Main Components
 - `cmd/api` + `internal/*`: Go backend
-- `apps/api`: legacy FastAPI reference implementation kept during migration
+- `apps/api`: Python/FastAPI backend for the same product surface
 - `apps/web`: React + Vite frontend
 - `packages/llm`: provider abstraction
 - `packages/rag`: ingestion/retrieval/citations
@@ -106,12 +110,13 @@ High-level flow:
 - End-to-end RAG pipeline works in a hosted environment (Firebase + Cloud Run + Cloud SQL)
 - Retrieval and citations are visible in the UI and API
 - Eval and regression tooling can catch behavior changes between stub and real providers
+- The same RAG product can be implemented in both Go and Python/FastAPI without changing the frontend contract
 - Cloud operations/debugging workflows are documented and reproducible
 
 ## Tradeoffs / Current Limitations
 - Go backend real provider execution is not implemented yet; current Go behavior is stub-first
 - Exact FastAPI validation and edge-case parity still needs a final review pass
-- `apps/api` still exists as a legacy reference and has not been retired yet
+- Maintaining both Go and FastAPI backends increases documentation and maintenance overhead
 - CI is implemented; CD is still manual (deploy scripts + commands)
 - Tracing is currently log-based spans (not full OpenTelemetry exporter)
 
@@ -136,11 +141,27 @@ make migrate
 make api
 ```
 
-Legacy Python backend reference:
+Python/FastAPI backend:
 ```bash
 uv venv --python 3.11
 source .venv/bin/activate
 uv pip install -e ".[dev]"
+uv run uvicorn apps.api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Backend runtime summary:
+```text
+Go API (primary):       http://localhost:8080
+FastAPI API:            http://localhost:8000
+```
+
+The Go backend is the primary local and container runtime path:
+```bash
+make api
+```
+
+The FastAPI backend remains available for comparison and parity checks:
+```bash
 uv run uvicorn apps.api.main:app --reload --port 8000
 ```
 
